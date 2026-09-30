@@ -1,0 +1,10 @@
+{
+  "name": "wicked-functions",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.54.0",
+    "@netlify/blobs": "^7.0.0",
+    "web-push": "^3.6.7"
+  }
+}

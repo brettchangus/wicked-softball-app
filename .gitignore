@@ -1,0 +1,16 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Dependencies (auto-installed by Netlify's functions plugin at build)
+node_modules/
+
+# Netlify CLI local state
+.netlify/
+
+# Local migration inputs containing player/private data
+.private/
+
+# Runtime season records, snapshots, and archives belong in Netlify Blobs.
+data/

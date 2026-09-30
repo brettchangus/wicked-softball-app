@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<base href="/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Team Tournament Hub — Admin</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" referrerpolicy="no-referrer">
+<style>
+  :root { --bg:#0f172a; --card:#1e293b; --line:#334155; --txt:#e2e8f0; --mut:#94a3b8;
+          --accent:#a855f7; --ok:#22c55e; --warn:#f59e0b; --danger:#ef4444; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; padding:0 0 80px; }
+  header { position:sticky; top:0; background:var(--bg); border-bottom:1px solid var(--line); padding:14px 16px; z-index:10; display:flex; align-items:center; gap:10px; }
+  header h1 { font-size:17px; margin:0; }
+  header .ev { margin-left:auto; font-size:12px; color:var(--mut); text-align:right; }
+  main { max-width:780px; margin:0 auto; padding:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
+  .card h2 { font-size:14px; text-transform:uppercase; letter-spacing:.05em; color:var(--mut); margin:0 0 12px; }
+  label { display:block; font-size:12px; color:var(--mut); margin:10px 0 4px; }
+  .required-mark { color:var(--danger); font-size:14px; font-weight:700; margin-left:3px; }
+  input, select, textarea { width:100%; background:#0b1220; border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:8px 10px; font:inherit; }
+  input[type=number] { width:90px; }
+  textarea { min-height:54px; resize:vertical; }
+  button { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:9px 14px; font:600 14px/1 inherit; cursor:pointer; }
+  button.sec { background:#334155; }
+  button.danger { background:var(--danger); }
+  button.ghost { background:transparent; border:1px solid var(--line); color:var(--txt); }
+  button:disabled { opacity:.5; cursor:default; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:flex-end; }
+  .grow { flex:1 1 140px; }
+  .game { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:10px; }
+  .game .gh { display:flex; justify-content:space-between; gap:8px; font-size:13px; margin-bottom:8px; }
+  .game .gh .mut { color:var(--mut); font-size:12px; }
+  .badge { font-size:10px; background:var(--warn); color:#000; border-radius:6px; padding:2px 6px; font-weight:700; }
+  .badge.active-tournament { background:var(--ok); margin-left:8px; }
+  #activeContext { color:var(--txt); font-size:13px; font-weight:700; }
+  .filter { margin-bottom:12px; }
+  .seasonrow { border:1px solid var(--line); border-radius:10px; padding:10px; margin-bottom:8px; }
+  .season-summary { display:grid; grid-template-columns:1fr auto; gap:8px 18px; align-items:start; }
+  .season-summary .details { color:var(--mut); font-size:13px; overflow-wrap:anywhere; }
+  .season-summary .details b { color:var(--txt); font-weight:600; }
+  .season-summary .details a, .season-summary .details a:link, .season-summary .details a:visited,
+  .season-summary .details a:hover, .season-summary .details a:active { color:#7dd3fc; }
+  .season-summary .actions { display:flex; flex-direction:column; gap:8px; min-width:120px; }
+  .season-summary .actions label { margin:0 0 4px; }
+  .subpanel { margin:10px 0 4px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:#0b1220; }
+  .addlink { cursor:pointer; display:inline-block; margin-top:6px; color:var(--mut); }
+  .addlink:hover { color:var(--txt); }
+  .toast { position:fixed; left:50%; bottom:20px; transform:translateX(-50%); background:#0b1220; border:1px solid var(--line); padding:10px 16px; border-radius:10px; max-width:90vw; opacity:0; transition:opacity .2s; z-index:50; }
+  .toast.show { opacity:1; }
+  .toast.ok { border-color:var(--ok); } .toast.err { border-color:var(--danger); }
+  .status-grid { display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:13px; }
+  .status-grid b { color:var(--mut); font-weight:500; }
+  /* confirm modal */
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; padding:20px; z-index:100; }
+  .modal-bg.show { display:flex; }
+  .modal { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; max-width:440px; width:100%; }
+  .editor-bg { z-index:90; align-items:flex-start; overflow:auto; }
+  .editor-bg .modal { max-width:740px; margin:24px auto; }
+  .mg-import-bg { z-index:95; }
+  .editor-head { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+  .editor-head h3 { margin:0; }
+  .modal h3 { margin:0 0 10px; font-size:16px; }
+  .modal .msg { color:var(--txt); font-size:14px; white-space:pre-wrap; margin-bottom:18px; }
+  .modal .acts { display:flex; gap:10px; justify-content:flex-end; }
+  .hide { display:none !important; }
+  .note { color:var(--mut); font-size:12px; margin:6px 0; }
+  /* Homerun Derby roster summary and editor */
+  .mg-summary { font-size:13px; line-height:1.7; overflow-wrap:anywhere; }
+  .mg-table-wrap { overflow-x:auto; }
+  .mg-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .mg-table th { text-align:left; color:var(--mut); font-weight:500; font-size:12px; padding:0 6px 6px; white-space:nowrap; }
+  .mg-table td { padding:4px 6px; vertical-align:middle; }
+  .mg-table input[type=text] { min-width:130px; }
+  .mg-table input[type=number] { width:70px; }
+  .mg-table select { min-width:90px; }
+  .mg-table input[type=checkbox] { width:auto; }
+  .mg-table td.mg-check { text-align:center; }
+  .note.section-title { margin:0 0 4px; text-transform:uppercase; letter-spacing:.05em; }
+  .gc-toolbar { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin:0 0 12px; }
+  .gc-toolbar > div { flex:1 1 250px; min-width:0; }
+  .gc-toolbar label { margin:0 0 5px; }
+  .gc-token-help { margin:0 0 12px; font-size:12px; color:var(--mut); }
+  .gc-token-help summary { cursor:pointer; }
+  .gc-token-help a { color:#7dd3fc; }
+  .gc-refresh-row { margin:0 0 12px; }
+  .gc-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .gc-table th { color:var(--mut); text-align:left; font-size:12px; font-weight:600; padding:8px; border-bottom:1px solid var(--line); }
+  .gc-table td { padding:11px 8px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  .gc-table tbody:last-child tr:last-child td { border-bottom:0; }
+  .gc-table .gc-actions { text-align:right; white-space:nowrap; }
+  .gc-table .gc-actions button { padding:7px 10px; margin-left:4px; }
+  .gc-table .gc-linked { color:#7dd3fc; font-weight:600; overflow-wrap:anywhere; }
+  .gc-table .gc-record { color:var(--txt); font-size:12px; margin-top:4px; font-variant-numeric:tabular-nums; }
+  .gc-table .gc-record.missing { color:var(--mut); }
+  .gc-table .gc-status { color:var(--mut); white-space:nowrap; }
+  .gc-table .gc-meta { color:var(--mut); font-size:12px; margin-top:3px; }
+  .gc-table .gc-detail > td { padding:8px 8px 14px; background:#172236; }
+  .gc-editor { display:grid; grid-template-columns:minmax(140px,1fr) minmax(200px,1.5fr) auto auto; gap:8px; align-items:end; }
+  .gc-editor label { min-width:0; margin:0; }
+  .gc-editor label span { display:block; margin:0 0 5px; }
+  .gc-results { display:grid; gap:8px; }
+  .gc-results[hidden], .gc-editor[hidden], .gc-detail[hidden] { display:none; }
+  .gc-result { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:6px 0; border-bottom:1px solid var(--line); }
+  .gc-result:last-child { border-bottom:0; }
+  .gc-result-info { flex:1 1 220px; }
+  .gc-result-info a { color:#7dd3fc; }
+  @media (max-width:620px) {
+    .gc-table .gc-status-col, .gc-table .gc-status { display:none; }
+    .gc-table th, .gc-table td { padding:9px 4px; }
+    .gc-table .gc-actions { white-space:normal; min-width:104px; }
+    .gc-table .gc-actions button { margin:2px; }
+    .gc-editor { grid-template-columns:1fr; }
+  }
+  @media (max-width:480px) {
+    .gc-table, .gc-table tbody, .gc-table tr, .gc-table td { display:block; width:100%; }
+    .gc-table thead { display:none; }
+    .gc-table tbody { padding:8px 0; border-bottom:1px solid var(--line); }
+    .gc-table tbody:last-child { border-bottom:0; }
+    .gc-table tbody > tr:first-child { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 8px; }
+    .gc-table tbody > tr:first-child td { border:0; padding:2px 0; }
+    .gc-table tbody > tr:first-child td:first-child { grid-column:1 / -1; }
+    .gc-table tbody > tr:first-child td:nth-child(2) { grid-column:1; }
+    .gc-table tbody > tr:first-child td:last-child { grid-column:2; grid-row:2; min-width:0; }
+    .gc-table .gc-detail > td { padding:10px 0; }
+  }
+  details.collapsible > summary { list-style:none; cursor:pointer; margin:0; display:flex; align-items:center; gap:8px; }
+  details.collapsible > summary::-webkit-details-marker { display:none; }
+  details.collapsible > summary .expander { font-size:11px; width:12px; text-align:center; transition:transform .15s; }
+  details.collapsible[open] > summary { margin-bottom:4px; }
+  details.collapsible[open] > summary .expander { transform:rotate(90deg); }
+  .summary-hint { text-transform:none; letter-spacing:0; color:var(--warn); }
+  /* Result trophy — same place colors as the dashboard's .trophy-icon */
+  .result-trophy { font-size:24px; line-height:36px; min-width:36px; text-align:center; color:var(--mut); }
+  .result-trophy.place-1 { color:#f5b800; } .result-trophy.place-2 { color:#cbd5e1; }
+  .result-trophy.place-3 { color:#b96f32; } .result-trophy.place-other { color:#94a3b8; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🥎 Team Hub Admin</h1>
+  <div class="ev" id="evInfo"></div>
+</header>
+
+<main>
+  <!-- UNLOCK -->
+  <div class="card" id="unlockCard">
+    <h2>Unlock</h2>
+    <p class="note">Enter the admin secret (ADMIN_SECRET, or SETUP_SECRET). Stored locally on this device only.</p>
+    <div class="row">
+      <input class="grow" id="secret" type="password" placeholder="admin secret" autocomplete="off">
+      <button id="unlockBtn">Unlock</button>
+    </div>
+  </div>
+
+  <div id="app" class="hide">
+    <!-- TEAM / SEASON CONTEXT -->
+    <div class="card">
+      <h2>Team & season</h2>
+      <p class="note" id="activeContext"></p>
+      <p class="note hide" id="editingContext"></p>
+
+      <!-- TEAM -->
+      <label>Team</label>
+      <div class="row">
+        <select id="ctxTeam" class="grow"></select>
+        <button class="sec" id="teamEditToggle">Edit</button>
+      </div>
+      <a class="note addlink" id="teamAddToggle">+ Add team</a>
+
+      <div id="teamEditPanel" class="subpanel hide">
+        <div class="row">
+          <div class="grow"><label>Team name</label><input id="editTeamName"></div>
+          <div><label>NorCal team id</label><input id="editTeamId" placeholder="1234567890"></div>
+          <div><label title="Fallback only — each tournament detects its own age/division automatically (see Tournaments below). Only used before a schedule is published or if detection can't find this team.">Age (fallback)</label><input id="editTeamAge" style="width:70px" placeholder="10"></div>
+        </div>
+        <div class="row">
+          <div class="grow"><label>Header subtitle</label><input id="editTeamSubtitle" placeholder="City · Coach"></div>
+          <div class="grow"><label>Logo URL</label><input id="editTeamLogo" placeholder="assets/team-logo.png"></div>
+          <button id="updateTeam">Save team</button>
+        </div>
+        <p class="note" style="margin:10px 0 4px">Only needed for AST tournaments — a per-tournament correction in the Tournaments card below overrides these.</p>
+        <div class="row">
+          <div class="grow"><label>AST roster team name (exact)</label><input id="editTeamAstName" placeholder="Team name as listed by AST"></div>
+          <div class="grow"><label>AST region</label><input id="editTeamAstRegion" placeholder="South Bay"></div>
+        </div>
+        <p class="note" style="margin:4px 0 0">The team <em>key</em> can't be changed — to fix a key, delete and recreate.</p>
+        <div class="row" style="margin-top:12px">
+          <button class="danger" id="deleteTeam">Delete team</button>
+          <span class="note">Removes the team and all its seasons. Can't delete the default team.</span>
+        </div>
+      </div>
+
+      <div id="teamAddPanel" class="subpanel hide">
+        <div class="row">
+          <div class="grow"><label>Team key</label><input id="newTeamKey" placeholder="wicked-elite"></div>
+          <div class="grow"><label>Team name</label><input id="newTeamName" placeholder="Example Softball Club"></div>
+          <div><label>NorCal team id</label><input id="newTeamId" placeholder="1234567890"></div>
+          <div><label title="Fallback only — each tournament detects its own age/division automatically (see Tournaments below). Only used before a schedule is published or if detection can't find this team.">Age (fallback)</label><input id="newTeamAge" placeholder="10" style="width:70px"></div>
+        </div>
+        <div class="row">
+          <div class="grow"><label>Header subtitle</label><input id="newTeamSubtitle" placeholder="City · Coach"></div>
+          <div class="grow"><label>Logo URL</label><input id="newTeamLogo" placeholder="assets/team-logo.png"></div>
+        </div>
+        <p class="note" style="margin:10px 0 4px">Only needed for AST tournaments — a per-tournament correction in the Tournaments card below overrides these.</p>
+        <div class="row">
+          <div class="grow"><label>AST roster team name (exact)</label><input id="newTeamAstName" placeholder="Team name as listed by AST"></div>
+          <div class="grow"><label>AST region</label><input id="newTeamAstRegion" placeholder="South Bay"></div>
+          <button id="createTeam">Create team</button>
+        </div>
+      </div>
+
+      <!-- SEASON -->
+      <label style="margin-top:18px">Season</label>
+      <div class="row">
+        <select id="ctxSeason" class="grow"></select>
+        <button class="sec" id="seasonEditToggle">Edit</button>
+      </div>
+      <a class="note addlink" id="seasonAddToggle">+ Add season</a>
+
+      <div id="seasonEditPanel" class="subpanel hide">
+        <div class="row">
+          <div class="grow"><label>Season name</label><input id="editSeasonName"></div>
+          <button id="updateSeason">Save season</button>
+        </div>
+        <p class="note" style="margin:4px 0 0">The season <em>key</em> can't be changed — to fix a key, delete and recreate.</p>
+        <div class="row" style="margin-top:12px">
+          <button class="danger" id="deleteSeason">Delete season</button>
+          <span class="note">Removes this season and all its data.</span>
+        </div>
+      </div>
+
+      <div id="seasonAddPanel" class="subpanel hide">
+        <div class="row">
+          <div class="grow"><label>Season key</label><input id="newSeasonKey" placeholder="fall-2026"></div>
+          <div class="grow"><label>Season name</label><input id="newSeasonName" placeholder="Fall 2026"></div>
+          <button id="createSeason">Create season</button>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:18px">
+        <button id="ctxSetActive">Set Active</button>
+        <button class="sec" id="ctxOpen">Open dashboard</button>
+        <span class="note" id="noSeasonNote" hidden>This team has no season yet — add one to set up its schedule.</span>
+      </div>
+    </div>
+
+    <!-- TOURNAMENTS -->
+    <div class="card">
+      <h2>Tournaments</h2>
+      <p class="note">Configured tournaments shown on the public season schedule. Edit a tournament to change its details or run provider detection.</p>
+      <div class="game" id="archiveStatus"></div>
+      <div id="seasonRows"></div>
+      <div class="row" style="margin-top:10px">
+        <button class="sec" id="addSeason">+ Add tournament</button>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="danger" id="archiveSeason">Complete season</button>
+        <button class="sec" id="replaceArchive">Rebuild completed snapshot</button>
+        <button class="ghost" id="reopenSeason">Reopen season</button>
+      </div>
+    </div>
+
+    <!-- SCORES -->
+    <div class="card">
+      <h2>Scores & stream links</h2>
+      <input class="filter" id="gameFilter" placeholder="Filter games (team, pool, time)…">
+      <div id="games"></div>
+    </div>
+
+    <div class="card">
+      <h2>Opponent GameChanger links</h2>
+      <div class="gc-toolbar"><div><label for="gcToken">GameChanger token (kept only in this open page)</label>
+        <input id="gcToken" type="password" autocomplete="off" spellcheck="false" placeholder="Paste token, or use configured token"></div>
+        <button id="gcFindAll">Search all</button></div>
+      <details class="gc-token-help"><summary>Get a token without DevTools</summary>
+        <p>Drag <a id="gcTokenBookmarklet" draggable="true">Copy GC token</a> to your browser's bookmarks bar once. In a signed-in GameChanger tab, click that bookmark and search for any team. Then paste the copied token above.</p>
+      </details>
+      <div class="gc-refresh-row"><button class="sec" id="gcRefreshRecords">Refresh records</button></div>
+      <div id="gcTeams"></div>
+    </div>
+
+    <!-- HOMERUN DERBY (per team + season) -->
+    <div class="card" id="mgCard">
+      <h2>Homerun Derby</h2>
+      <p class="note" id="mgRosterContext"></p>
+      <div class="mg-summary" id="mgRosterSummary"></div>
+      <div class="row" style="margin-top:14px">
+        <button id="mgEditRoster">Edit roster</button>
+        <button class="danger" id="opResetHs" style="margin-left:auto">Reset high scores</button>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div class="card">
+      <h2>Config</h2>
+      <!-- Links & team config -->
+      <label>Snacks sheet URL <span style="opacity:.7">(team-wide — same every tournament)</span></label><input id="cfgSnacks" placeholder="https://…">
+      <label for="cfgGameChanger">Our GameChanger team URL <span style="opacity:.7">(this season)</span></label><input id="cfgGameChanger" type="url" placeholder="https://web.gc.com/teams/…">
+      <label>Custom link <span style="opacity:.7">(shows after the rules — leave blank to hide)</span></label>
+      <div class="row">
+        <div><label>Title</label><input id="cfgLinkTitle" placeholder="Volunteer Sheet"></div>
+        <div><label>URL</label><input id="cfgLinkUrl" placeholder="https://…"></div>
+      </div>
+      <div class="row" style="margin-top:14px"><button id="saveCfg">Save config</button></div>
+      <h2 style="margin-top:20px">Operations</h2>
+      <div class="row">
+        <button class="sec" id="opPull">Pull scores from web now</button>
+        <button class="sec" id="opRefresh">Force refresh tabs</button>
+        <button class="sec" id="opSetup">Re-run setup</button>
+      </div>
+      <h2 style="margin-top:20px">Status</h2>
+      <div class="status-grid" id="statusGrid"></div>
+    </div>
+
+    <!-- PUSH NOTIFICATIONS -->
+    <div class="card">
+      <h2>Push Notifications</h2>
+      <label>Broadcast push to all subscribers</label>
+      <input id="bcTitle" placeholder="Title (e.g. We won!)">
+      <textarea id="bcBody" placeholder="Body (optional)"></textarea>
+      <div class="row" style="margin-top:8px">
+        <label style="margin:0;display:flex;align-items:center;gap:6px;color:var(--txt)"><input type="checkbox" id="bcRefresh" style="width:auto"> also reload tabs</label>
+        <button id="opBroadcast" style="margin-left:auto">Send push</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- TOURNAMENT EDITOR MODAL -->
+<div class="modal-bg editor-bg" id="tdModalBg">
+  <div class="modal">
+    <div class="editor-head">
+      <h3 id="tdModalTitle">Add tournament</h3>
+    </div>
+    <p class="note">Enter a NorCal, AST, or Tourney Machine tournament URL. Detect only updates this draft; nothing is saved until you click Save. Fields marked <span class="required-mark" aria-hidden="true">*</span> are required.</p>
+    <label>Tournament URL</label>
+    <div class="row">
+      <input class="grow" id="tdUrl" placeholder="NorCal, AST, or Tourney Machine tournament URL">
+      <button class="sec" id="tdDetect">Detect</button>
+    </div>
+    <p class="note" style="color:var(--warn)"><i class="fa-solid fa-triangle-exclamation"></i> Detect replaces the draft values returned by the provider. The tournament key is kept unchanged.</p>
+    <div class="row">
+      <div class="grow"><label for="tdName">Name <span class="required-mark" aria-hidden="true">*</span></label><input id="tdName" required></div>
+      <div><label for="tdKey">Tournament key <span class="required-mark" aria-hidden="true">*</span></label><input id="tdKey" style="width:170px" required></div>
+    </div>
+    <div class="row">
+      <div><label for="tdStartDate">Start date <span class="required-mark" aria-hidden="true">*</span></label><input id="tdStartDate" type="date" required></div>
+      <div><label for="tdEndDate">End date <span class="required-mark" aria-hidden="true">*</span></label><input id="tdEndDate" type="date" required></div>
+      <div class="grow"><label for="tdLocation">Location <span class="required-mark" aria-hidden="true">*</span> <span style="opacity:.7">(shown on the season schedule)</span></label><input id="tdLocation" placeholder="City, State" required></div>
+    </div>
+    <div id="tdLegacyDates" class="hide">
+      <label>Previously saved season-list dates (old data)</label><input id="tdDates" readonly>
+    </div>
+    <label>Tournament rules URL</label><input id="tdRules" placeholder="https://…">
+    <p class="note" id="tdDetectedInfo" hidden></p>
+
+    <div id="tdDetectionFields" class="subpanel hide">
+      <div class="row">
+        <div class="grow"><label id="tdDivLabel">Division</label><select id="tdDiv"></select></div>
+        <div class="grow"><label id="tdTeamLabel">Our team</label><select id="tdTeam"></select></div>
+      </div>
+      <div id="tdSistersRow"><label>Sister division(s) <span style="opacity:.7">(same age, e.g. the C team's bracket)</span></label><div id="tdSisters"></div></div>
+      <p class="note" id="tdIssues"></p>
+    </div>
+
+    <p class="note" id="tdAddNote">Weather and the tournament result fill in automatically once the tournament is saved. Edit it afterwards to override either one.</p>
+
+    <!-- Edit mode only: both sections are overrides on top of what setup / the score check produce. -->
+    <details class="subpanel collapsible" id="tdWeatherPanel">
+      <summary class="note section-title"><i class="fa-solid fa-chevron-right expander" aria-hidden="true"></i>Weather <span class="summary-hint" id="tdWeatherHint"></span></summary>
+      <p class="note" id="tdVenueInfo"></p>
+      <label>Weather link override <span style="opacity:.7">(blank → weather.com at the venue)</span></label><input id="tdWx" placeholder="https://…">
+      <div class="row">
+        <div><label>Venue lat override</label><input id="tdLat" type="number" step="0.0001" style="width:130px"></div>
+        <div><label>Venue lon override</label><input id="tdLon" type="number" step="0.0001" style="width:130px"></div>
+      </div>
+      <p class="note">Leave lat/lon blank to use the provider's venue location.</p>
+    </details>
+
+    <details class="subpanel collapsible" id="tdResultPanel">
+      <summary class="note section-title"><i class="fa-solid fa-chevron-right expander" aria-hidden="true"></i>Tournament Result <span class="summary-hint" id="tdResultHint"></span></summary>
+      <p class="note" id="tdAutoResult"></p>
+      <div class="row">
+        <div><label>Place</label><input id="tdPlPlace" type="number" min="1" placeholder="1" style="width:80px"></div>
+        <div><label>Trophy</label><div id="tdPlTrophy" class="result-trophy" aria-live="polite">—</div></div>
+        <div class="grow"><label>Label</label><input id="tdPlLabel" placeholder="Champions"></div>
+      </div>
+      <p class="note">Leave blank to use the automatic result. A result entered here is never replaced by the score check.</p>
+    </details>
+
+    <div class="row" style="margin-top:16px">
+      <button class="danger hide" id="tdDelete">Delete tournament</button>
+      <button id="tdSave" style="margin-left:auto">Save</button>
+      <button class="sec" id="tdSaveActive">Save &amp; Set Active</button>
+      <button class="ghost" id="tdCancel">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOMERUN DERBY ROSTER EDITOR MODAL -->
+<div class="modal-bg editor-bg" id="mgModalBg" role="dialog" aria-modal="true" aria-labelledby="mgModalTitle">
+  <div class="modal">
+    <div class="editor-head"><h3 id="mgModalTitle">Edit Homerun Derby roster</h3></div>
+    <p class="note" id="mgModalContext"></p>
+    <p class="note">Set each player's name, jersey number, look, and handedness. Saving an empty roster hides the game.</p>
+    <div class="mg-table-wrap">
+      <table class="mg-table">
+        <thead><tr><th>Name</th><th>#</th><th>Skin tone</th><th>Hair</th><th>Bats L</th><th>Throws L</th><th></th></tr></thead>
+        <tbody id="mgRosterRows"></tbody>
+      </table>
+    </div>
+    <p class="note hide" id="mgRosterEmpty">No players yet — saving now will hide the Homerun Derby.</p>
+    <button class="ghost" id="mgAddPlayer" style="margin-top:8px">+ Add player</button>
+    <div class="row" style="margin-top:16px;justify-content:flex-end">
+      <button class="sec" id="mgOpenImport" style="margin-right:auto">Import</button>
+      <button class="ghost" id="mgCancelRoster">Cancel</button>
+      <button id="mgSaveRoster">Save roster</button>
+    </div>
+  </div>
+</div>
+
+<!-- HOMERUN DERBY ROSTER IMPORT MODAL -->
+<div class="modal-bg mg-import-bg" id="mgImportBg" role="dialog" aria-modal="true" aria-labelledby="mgImportTitle">
+  <div class="modal">
+    <h3 id="mgImportTitle">Import roster</h3>
+    <p class="note" id="mgImportContext"></p>
+    <label for="mgImportSeason">Import roster from another team or season</label>
+    <select id="mgImportSeason"></select>
+    <p class="note">The imported roster will replace this editor's roster. It is not saved until you click Save roster.</p>
+    <div class="row" style="margin-top:16px;justify-content:flex-end">
+      <button class="ghost" id="mgCancelImport">Cancel</button>
+      <button id="mgImportRoster">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h3 id="modalTitle">Confirm</h3>
+    <div class="msg" id="modalMsg"></div>
+    <div class="acts">
+      <button class="ghost" id="modalCancel">Cancel</button>
+      <button id="modalOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const KEYK = 'wickedAdminKey';
+const CTXK = 'teamHubAdminContext';
+let SNAP = null, STATE = null, CATALOG = null, SEASON = [], GAMES = [];
+let LOAD_SEQ = 0;
+let CTX = (() => { try { return JSON.parse(localStorage.getItem(CTXK) || '{}'); } catch { return {}; } })();
+
+function contextQuery() {
+  return new URLSearchParams({
+    team:CTX.teamKey || '',
+    season:CTX.seasonKey || '',
+    ...(CTX.eventKey ? { eventKey:CTX.eventKey } : {}),
+  }).toString();
+}
+
+// ---------- API ----------
+function adminKey() { return localStorage.getItem(KEYK) || ''; }
+async function api(action, payload = {}) {
+  const r = await fetch('/admin?key=' + encodeURIComponent(adminKey()), {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, ...CTX, ...payload }),
+  });
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 403) { lock(); throw new Error('Wrong secret'); }
+  if (!r.ok || data.error) throw Object.assign(new Error(data.error || ('HTTP ' + r.status)), { code:data.code });
+  return data;
+}
+
+// ---------- toast + confirm ----------
+let _t;
+function toast(msg, kind = 'ok') {
+  const el = $('#toast'); el.textContent = msg; el.className = 'toast show ' + kind;
+  clearTimeout(_t); _t = setTimeout(() => el.className = 'toast', 2600);
+}
+function confirmAction(title, msg, okLabel = 'Confirm', danger = false) {
+  return new Promise(res => {
+    $('#modalTitle').textContent = title;
+    $('#modalMsg').textContent = msg;
+    const ok = $('#modalOk'); ok.textContent = okLabel; ok.className = danger ? 'danger' : '';
+    $('#modalBg').classList.add('show');
+    const done = v => { $('#modalBg').classList.remove('show'); ok.onclick = null; $('#modalCancel').onclick = null; res(v); };
+    ok.onclick = () => done(true);
+    $('#modalCancel').onclick = () => done(false);
+  });
+}
+
+// ---------- unlock ----------
+function lock() { $('#app').classList.add('hide'); $('#unlockCard').classList.remove('hide'); }
+async function unlock() {
+  localStorage.setItem(KEYK, $('#secret').value.trim());
+  try {
+    await loadAll();
+    $('#unlockCard').classList.add('hide'); $('#app').classList.remove('hide');
+    toast('Unlocked');
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+// ---------- load ----------
+async function loadAll() {
+  const loadSeq = ++LOAD_SEQ;
+  let catalogResult;
+  try { catalogResult = await api('getCatalog'); }
+  catch (e) {
+    // Legacy records exist but this runtime couldn't confirm the catalog is missing.
+    if (e.code !== 'catalogMigrationUnconfirmed') throw e;
+    if (!await confirmAction('Migrate legacy configuration',
+      `${e.message} Only continue if this site has never had teams configured here: migrating replaces the catalog with one built from the older records.`,
+      'Migrate', true)) throw e;
+    catalogResult = await api('migrateLegacyCatalog');
+  }
+  if (loadSeq !== LOAD_SEQ) return;
+  CATALOG = catalogResult.catalog;
+  const teams = CATALOG.teams || {};
+  if (!teams[CTX.teamKey]) CTX.teamKey = CATALOG.defaultTeamKey || Object.keys(teams)[0];
+  const teamSummary = teams[CTX.teamKey];
+  if (!teamSummary?.seasons?.[CTX.seasonKey])
+    CTX.seasonKey = teamSummary?.defaultSeasonKey || Object.keys(teamSummary?.seasons || {})[0];
+  CTX.eventKey = null;
+  localStorage.setItem(CTXK, JSON.stringify(CTX));
+  const [snap, state] = await Promise.all([
+    fetch('/api/snapshot?' + contextQuery(), { cache: 'no-store' }).then(r => r.ok ? r.json() : null).catch(() => null),
+    api('getState'),
+  ]);
+  if (loadSeq !== LOAD_SEQ) return;
+  SNAP = snap; STATE = state;
+  CTX = { ...CTX, ...(STATE.context || {}) };
+  localStorage.setItem(CTXK, JSON.stringify(CTX));
+  preferFreshSeason();
+  CATALOG = STATE.catalog || CATALOG;
+  renderContext(); collapsePanels(); fillTeamEdit(); fillSeasonEdit();
+  const note = $('#noSeasonNote'); if (note) note.hidden = !STATE.noSeason;
+  if (STATE.noSeason) {
+    // Team with no season yet — show the team, skip the season-dependent cards.
+    $('#mgCard').hidden = true;
+    closeMiniGameEditor();
+    $('#evInfo').innerHTML = `${esc(STATE.team?.name || CTX.teamKey)}<br><span class="note">No season yet — add one to set up its schedule.</span>`;
+    return;
+  }
+  renderEvInfo(); buildGames(); renderGameChangerTeams(); fillConfig(); initSeason(); initMiniGameRoster(); renderStatus();
+}
+// Prefill the team editor from the full team record (STATE.team carries norcalTeamId, which the
+// public catalog omits).
+function fillTeamEdit() {
+  const t = (STATE && STATE.team) || {};
+  $('#editTeamName').value = t.name || '';
+  $('#editTeamId').value = t.norcalTeamId || '';
+  $('#editTeamAge').value = t.agePrefix || '';
+  $('#editTeamAstName').value = t.astTeamName || '';
+  $('#editTeamAstRegion').value = t.astRegion || '';
+  $('#editTeamSubtitle').value = t.subtitle || '';
+  $('#editTeamLogo').value = t.logoUrl || '';
+}
+function fillSeasonEdit() {
+  const s = (STATE && STATE.season) || null;
+  $('#editSeasonName').value = s ? (s.name || '') : '';
+}
+// Panels under Team/Season are mutually exclusive; opening one closes the rest.
+function collapsePanels() {
+  ['teamEditPanel','teamAddPanel','seasonEditPanel','seasonAddPanel'].forEach(id => $('#'+id).classList.add('hide'));
+}
+function togglePanel(id) {
+  const el = $('#'+id); const wasHidden = el.classList.contains('hide');
+  collapsePanels(); if (wasHidden) el.classList.remove('hide');
+}
+// Ride out Netlify Blobs read-after-write: after a create, poll the catalog until it reflects the
+// new team/season before reloading, so a create never surfaces a spurious "not found" error.
+async function waitForCatalog(pred, tries = 6, delayMs = 350) {
+  for (let i = 0; i < tries; i++) {
+    try { const { catalog } = await api('getCatalog'); if (pred(catalog)) return catalog; } catch {}
+    await new Promise(r => setTimeout(r, delayMs));
+  }
+  return null;
+}
+function cfg() { return (STATE && STATE.config && STATE.config.events && STATE.config.events[STATE.activeEventId]) || {}; }
+function overrides() { return (STATE && STATE.overrides) || {}; }
+function streamLinks() { return cfg().streamLinks || {}; }
+
+function renderEvInfo() {
+  const m = STATE.meta || {};
+  $('#evInfo').innerHTML = `${esc(STATE.team?.name || CTX.teamKey)} · ${esc(STATE.season?.name || CTX.seasonKey)}<br>${esc(m.name || '(no structure)')}`;
+}
+
+function renderContext() {
+  const teams = CATALOG?.teams || {};
+  $('#ctxTeam').innerHTML = Object.values(teams).map(t =>
+    `<option value="${esc(t.key)}"${t.key===CTX.teamKey?' selected':''}>${esc(t.name)}</option>`).join('');
+  const team = teams[CTX.teamKey];
+  $('#ctxSeason').innerHTML = Object.values(team?.seasons || {}).map(s =>
+    `<option value="${esc(s.key)}"${s.key===CTX.seasonKey?' selected':''}>${esc(s.name)}${['completed','archived'].includes(s.status)?' · Completed':''}</option>`).join('');
+  const defaultTeam = teams[CATALOG?.defaultTeamKey];
+  const defaultSeason = defaultTeam?.seasons?.[defaultTeam.defaultSeasonKey];
+  const livePair = Object.values(teams).flatMap(candidate => Object.values(candidate.seasons || {})
+    .filter(season => season.status === 'active').map(season => ({ team:candidate, season })))[0];
+  const activeTeam = livePair?.team, activeSeason = livePair?.season;
+  $('#activeContext').textContent = livePair
+    ? `Active: ${activeTeam.name} · ${activeSeason.name}`
+    : `Active: None · Default dashboard: ${defaultTeam?.name || '—'} · ${defaultSeason?.name || '—'}`;
+  const different = CTX.teamKey !== activeTeam?.key || CTX.seasonKey !== activeSeason?.key;
+  $('#editingContext').textContent = `Editing: ${team?.name || '—'} · ${team?.seasons?.[CTX.seasonKey]?.name || '—'}`;
+  $('#editingContext').classList.toggle('hide', !different);
+  $('#ctxSetActive').disabled = !CTX.seasonKey || !different;
+}
+async function changeContext() {
+  closeMiniGameEditor();
+  CTX = { teamKey:$('#ctxTeam').value, seasonKey:$('#ctxSeason').value, eventKey:null };
+  localStorage.setItem(CTXK, JSON.stringify(CTX));
+  await loadAll();
+}
+$('#ctxTeam').onchange = async () => {
+  closeMiniGameEditor();
+  const team = CATALOG.teams[$('#ctxTeam').value];
+  CTX = { teamKey:team.key, seasonKey:team.defaultSeasonKey || Object.keys(team.seasons || {})[0], eventKey:null };
+  localStorage.setItem(CTXK, JSON.stringify(CTX));
+  await loadAll();
+};
+$('#ctxSeason').onchange = changeContext;
+$('#ctxSetActive').onclick = async () => {
+  if (!STATE?.season?.featuredEventKey || !STATE.season.events?.[STATE.season.featuredEventKey]?.providerRef)
+    return toast('Set a tournament active before making this team and season active.', 'err');
+  if (seasonIsComplete()) return toast('Reopen this completed season first.', 'err');
+  const name = `${STATE.team.name} · ${STATE.season.name}`;
+  if (!await confirmAction('Set active team & season', `Make ${name} the site-wide default and the only season receiving live score polling?`)) return;
+  await run(async () => { const result = await api('setActiveContext'); await loadAll(); return result; }, `${name} is active`);
+};
+$('#ctxOpen').onclick = () => window.open(`/teams/${encodeURIComponent(CTX.teamKey)}/seasons/${encodeURIComponent(CTX.seasonKey || '')}`, '_blank', 'noopener');
+$('#teamEditToggle').onclick = () => { fillTeamEdit(); togglePanel('teamEditPanel'); };
+$('#teamAddToggle').onclick = () => togglePanel('teamAddPanel');
+$('#seasonEditToggle').onclick = () => {
+  if (!CTX.seasonKey) return toast('No season to edit — add one first', 'err');
+  fillSeasonEdit(); togglePanel('seasonEditPanel');
+};
+$('#seasonAddToggle').onclick = () => togglePanel('seasonAddPanel');
+$('#updateTeam').onclick = async () => {
+  const team = {
+    name:$('#editTeamName').value.trim(),
+    norcalTeamId:$('#editTeamId').value.trim() || null,
+    agePrefix:$('#editTeamAge').value.trim(),
+    astTeamName:$('#editTeamAstName').value.trim() || null,
+    astRegion:$('#editTeamAstRegion').value.trim() || null,
+    subtitle:$('#editTeamSubtitle').value.trim(),
+    logoUrl:$('#editTeamLogo').value.trim(),
+  };
+  if (!team.name) return toast('Team name is required', 'err');
+  if (!await confirmAction('Save team', `Save changes to ${team.name}?`)) return;
+  const ok = await run(() => api('updateTeam', { teamKey:CTX.teamKey, team }), 'Team updated');
+  if (ok) await loadAll();
+};
+$('#deleteTeam').onclick = async () => {
+  if (CTX.teamKey === (CATALOG && CATALOG.defaultTeamKey)) return toast('Cannot delete the default team', 'err');
+  const name = (STATE && STATE.team && STATE.team.name) || CTX.teamKey;
+  if (!await confirmAction('Delete team', `Delete ${name} (key "${CTX.teamKey}") and ALL its seasons? This cannot be undone.`, 'Delete', true)) return;
+  // Not via run(): its auto-refresh would re-request the now-deleted context and error. Reset first.
+  try {
+    await api('deleteTeam', { teamKey:CTX.teamKey });
+    toast('Team deleted');
+    CTX = {}; localStorage.removeItem(CTXK);
+    await loadAll();
+  } catch (e) { toast(e.message, 'err'); }
+};
+// Create a team ONLY (season is a separate step now). Not via run(): we await the catalog
+// reflecting the write before reloading, so a Blobs read-after-write lag can't surface as an error.
+$('#createTeam').onclick = async () => {
+  const team = {
+    key:$('#newTeamKey').value.trim(), name:$('#newTeamName').value.trim(),
+    norcalTeamId:$('#newTeamId').value.trim() || null, agePrefix:$('#newTeamAge').value.trim() || '10',
+    astTeamName:$('#newTeamAstName').value.trim() || null, astRegion:$('#newTeamAstRegion').value.trim() || null,
+    subtitle:$('#newTeamSubtitle').value.trim() || null, logoUrl:$('#newTeamLogo').value.trim() || null,
+  };
+  if (!team.key || !team.name) return toast('Team key and name are required', 'err');
+  if (!team.norcalTeamId) return toast('NorCal team id is required for live provider discovery', 'err');
+  if (!await confirmAction('Create team', `Create ${team.name} with stable key "${team.key}"?`)) return;
+  try { await api('createTeam', { team }); } catch (e) { return toast(e.message, 'err'); }
+  toast('Team created — now add a season');
+  await waitForCatalog(c => c.teams?.[team.key]);
+  CTX = { teamKey:team.key, seasonKey:null, eventKey:null };
+  localStorage.setItem(CTXK, JSON.stringify(CTX));
+  await loadAll();
+  togglePanel('seasonAddPanel');   // nudge toward adding the first season
+};
+$('#createSeason').onclick = async () => {
+  const season = { key:$('#newSeasonKey').value.trim(), name:$('#newSeasonName').value.trim() };
+  if (!season.key || !season.name) return toast('Season key and name are required', 'err');
+  if (!CTX.teamKey) return toast('Select a team first', 'err');
+  if (!await confirmAction('Create season', `Create ${season.name} for ${CATALOG?.teams?.[CTX.teamKey]?.name || CTX.teamKey}?`)) return;
+  try { await api('createSeason', { teamKey:CTX.teamKey, season }); } catch (e) { return toast(e.message, 'err'); }
+  toast('Season created');
+  await waitForCatalog(c => c.teams?.[CTX.teamKey]?.seasons?.[season.key]);
+  CTX = { teamKey:CTX.teamKey, seasonKey:season.key, eventKey:null };
+  localStorage.setItem(CTXK, JSON.stringify(CTX));
+  await loadAll();
+};
+$('#updateSeason').onclick = async () => {
+  if (!CTX.seasonKey) return toast('No season selected', 'err');
+  const name = $('#editSeasonName').value.trim();
+  if (!name) return toast('Season name is required', 'err');
+  if (!await confirmAction('Save season', `Rename this season to "${name}"?`)) return;
+  const ok = await run(() => api('updateSeason', { teamKey:CTX.teamKey, seasonKey:CTX.seasonKey, season:{ name } }), 'Season updated');
+  if (ok) await loadAll();
+};
+$('#deleteSeason').onclick = async () => {
+  if (!CTX.seasonKey) return toast('No season selected', 'err');
+  const name = (STATE && STATE.season && STATE.season.name) || CTX.seasonKey;
+  if (!await confirmAction('Delete season', `Delete ${name} and all its data? This cannot be undone.`, 'Delete', true)) return;
+  const tk = CTX.teamKey;
+  try {
+    await api('deleteSeason', { teamKey:tk, seasonKey:CTX.seasonKey });
+    toast('Season deleted');
+    CTX = { teamKey:tk, seasonKey:null, eventKey:null };
+    localStorage.setItem(CTXK, JSON.stringify(CTX));
+    await loadAll();   // re-resolves to the team's remaining default season, or the no-season state
+  } catch (e) { toast(e.message, 'err'); }
+};
+
+// ---------- games (scores + stream) ----------
+function collectGames() {
+  const out = [];
+  const pools = (SNAP && SNAP.pools) || {};
+  (SNAP && SNAP.poolOrder || Object.keys(pools)).forEach(pk => {
+    const p = pools[pk]; if (!p) return;
+    (p.games || []).forEach(g => out.push({
+      key: g.key, where: p.label || pk, no: g.gameNo, time: g.time,
+      top: g.hn, bot: g.an, kind: 'pool',
+    }));
+  });
+  Object.entries((SNAP && SNAP.bracketGames) || {}).forEach(([lvl, games]) => {
+    (games || []).forEach(g => out.push({
+      key: g.key, where: lvl + ' bracket', no: g.gameNo, time: g.time,
+      top: g.topName || g.topSeed || 'TBD', bot: g.botName || g.botSeed || 'TBD', kind: 'bracket',
+    }));
+  });
+  return out.filter(g => g.key);
+}
+function fmtTime(t) { try { return new Date(t).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' }); } catch { return ''; } }
+
+function buildGames() {
+  GAMES = collectGames();
+  renderGames();
+}
+function renderGames() {
+  const q = ($('#gameFilter').value || '').toLowerCase();
+  const ov = overrides(), sl = streamLinks();
+  $('#games').innerHTML = GAMES.filter(g =>
+    !q || `${g.top} ${g.bot} ${g.where} ${fmtTime(g.time)}`.toLowerCase().includes(q)
+  ).map(g => {
+    const o = ov[g.key] || {};
+    const manual = SNAP && SNAP.results && SNAP.results[g.key] && SNAP.results[g.key].manual;
+    const ts = o.topScore ?? '', bs = o.botScore ?? '', st = o.status || 'completed';
+    const stream = sl[g.key] || '';
+    return `<div class="game" data-key="${g.key}">
+      <div class="gh"><span><b>${esc(g.top)}</b> vs <b>${esc(g.bot)}</b></span>
+        <span class="mut">${esc(g.where)} · ${fmtTime(g.time)} ${manual ? '<span class="badge">MANUAL</span>' : ''}</span></div>
+      <div class="row">
+        <div><label>${esc(g.top)}</label><input type="number" class="sTop" value="${ts}"></div>
+        <div><label>${esc(g.bot)}</label><input type="number" class="sBot" value="${bs}"></div>
+        <div><label>Status</label><select class="sStatus">
+          <option value="completed"${st==='completed'?' selected':''}>Final</option>
+          <option value="won"${st==='won'?' selected':''}>Win (our team)</option>
+          <option value="lost"${st==='lost'?' selected':''}>Loss (our team)</option>
+          <option value="live"${st==='live'?' selected':''}>Live</option>
+        </select></div>
+        <button class="sSave">Save</button>
+        <button class="sec sRevert"${o.status||o.topScore!=null?'':' disabled'}>Revert to live</button>
+      </div>
+      <label>Stream / watch link</label>
+      <div class="row"><input class="grow sStream" value="${esc(stream)}" placeholder="https://…">
+        <button class="sec sStreamSave">Save link</button>
+        <button class="ghost sStreamClear"${stream?'':' disabled'}>Clear</button></div>
+    </div>`;
+  }).join('') || '<p class="note">No games yet (structure not loaded).</p>';
+}
+$('#games')?.addEventListener('click', async e => {
+  const card = e.target.closest('.game'); if (!card) return;
+  const key = card.dataset.key;
+  const g = GAMES.find(x => x.key === key) || {};
+  if (e.target.classList.contains('sSave')) {
+    const top = card.querySelector('.sTop').value, bot = card.querySelector('.sBot').value;
+    const status = card.querySelector('.sStatus').value;
+    const lbl = { completed: 'Final', won: 'Win', lost: 'Loss', live: 'Live' }[status];
+    if (!await confirmAction('Save score', `Set ${g.top} ${top||'–'} vs ${g.bot} ${bot||'–'} (${lbl})?`)) return;
+    await run(() => api('setOverride', { key, topScore: top, botScore: bot, status }), 'Score saved');
+  } else if (e.target.classList.contains('sRevert')) {
+    if (!await confirmAction('Revert to live', `Clear the manual override for ${g.top} vs ${g.bot} and use the web provider's live data again?`)) return;
+    await run(() => api('clearOverride', { key }), 'Reverted to live');
+  } else if (e.target.classList.contains('sStreamSave')) {
+    const url = card.querySelector('.sStream').value.trim();
+    if (!url) return toast('Enter a URL', 'err');
+    if (!await confirmAction('Save stream link', `Add a 📺 Watch link to ${g.top} vs ${g.bot}?`)) return;
+    await run(() => api('setStreamLink', { key, url }), 'Stream link saved');
+  } else if (e.target.classList.contains('sStreamClear')) {
+    if (!await confirmAction('Clear stream link', `Remove the Watch link from ${g.top} vs ${g.bot}?`)) return;
+    await run(() => api('clearStreamLink', { key }), 'Stream link cleared');
+  }
+});
+$('#gameFilter')?.addEventListener('input', renderGames);
+
+function gameChangerTeams() {
+  return (STATE?.gameChangerOpponents || []).map(t => [t.teamId, t.name, t.possibleOpponent]);
+}
+// Self-contained so the link can be dragged to the bookmarks bar and run on web.gc.com.
+function gameChangerTokenBookmarklet() {
+  if (location.hostname !== 'web.gc.com') {
+    alert('Open a signed-in web.gc.com tab, then click this bookmark.');
+    return;
+  }
+  if (window.__wickedGcCaptureActive) {
+    alert('Ready. Search for any GameChanger team.');
+    return;
+  }
+  window.__wickedGcCaptureActive = true;
+  const originalFetch = window.fetch;
+  const originalOpen = XMLHttpRequest.prototype.open;
+  const originalSetHeader = XMLHttpRequest.prototype.setRequestHeader;
+  let captured = false;
+  async function copyToken(token) {
+    if (captured || typeof token !== 'string' || token.split('.').length !== 3) return;
+    captured = true;
+    window.fetch = originalFetch;
+    XMLHttpRequest.prototype.open = originalOpen;
+    XMLHttpRequest.prototype.setRequestHeader = originalSetHeader;
+    window.__wickedGcCaptureActive = false;
+    try { await navigator.clipboard.writeText(token); }
+    catch {
+      const input = document.createElement('textarea');
+      input.value = token;
+      input.style.position = 'fixed'; input.style.opacity = '0';
+      document.body.appendChild(input); input.select();
+      const copied = document.execCommand('copy');
+      input.remove();
+      if (!copied) { alert('Could not copy the token. Click the bookmark and search again.'); return; }
+    }
+    alert('GameChanger token copied. Paste it into the admin page.');
+  }
+  window.fetch = function(input, init) {
+    try {
+      if (String(input?.url || input).includes('api.team-manager.gc.com/'))
+        copyToken(new Headers(init?.headers || input?.headers).get('gc-token'));
+    } catch {}
+    return originalFetch.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.open = function(method, url) {
+    this.__wickedGcRequest = String(url).includes('api.team-manager.gc.com/');
+    return originalOpen.apply(this, arguments);
+  };
+  XMLHttpRequest.prototype.setRequestHeader = function(name, value) {
+    if (this.__wickedGcRequest && String(name).toLowerCase() === 'gc-token') copyToken(value);
+    return originalSetHeader.apply(this, arguments);
+  };
+  alert('Ready. Search for any GameChanger team.');
+}
+$('#gcTokenBookmarklet').setAttribute('href', `javascript:(${gameChangerTokenBookmarklet.toString()})()`);
+$('#gcTokenBookmarklet').addEventListener('click', event => {
+  event.preventDefault();
+  toast('Drag Copy GC token to your bookmarks bar, then click it on web.gc.com.');
+});
+function renderGameChangerTeams() {
+  const links = cfg().gameChangerTeams || {};
+  const names = cfg().gameChangerTeamNames || {};
+  const records = SNAP?.config?.gameChangerRecords || {};
+  const teams = gameChangerTeams();
+  $('#gcTeams').innerHTML = teams.length ? `<table class="gc-table"><thead><tr><th>Opponent</th><th>GameChanger team</th><th class="gc-status-col">Status</th><th class="gc-actions">Actions</th></tr></thead>${teams.map(([id, name, possibleOpponent]) => {
+    const url = links[id] || '';
+    const gcName = names[id] || '';
+    const record = records[id];
+    const recordText = record ? `${record.win}–${record.loss}${record.tie ? `–${record.tie}` : ''}` : '—';
+    return `<tbody data-team-id="${esc(id)}"><tr>
+      <td><strong>${esc(name)}</strong>${possibleOpponent ? '<div class="gc-meta">Matchup unconfirmed</div>' : ''}</td>
+      <td>${url ? `<a class="gc-linked" href="${esc(url)}" target="blank">${esc(gcName || 'Open team')} ↗</a><div class="gc-record${record ? '' : ' missing'}">Record: ${esc(recordText)}</div>` : '<span class="gc-meta">No team selected</span>'}</td>
+      <td class="gc-status">${url ? 'Linked' : 'Needs review'}</td>
+      <td class="gc-actions"><button class="gcSearch">Search</button><button class="ghost gcEdit">Edit</button>${url ? `<button class="ghost gcClear" aria-label="Remove link for ${esc(name)}">Remove</button>` : ''}</td></tr>
+      <tr class="gc-detail" hidden><td colspan="4"><div class="gc-results" hidden></div>
+        <div class="gc-editor" hidden><label><span>GameChanger team name</span><input class="gcName" value="${esc(gcName)}" placeholder="Team name"></label>
+        <label><span>GameChanger team URL</span><input class="gcUrl" type="url" value="${esc(url)}" placeholder="https://web.gc.com/teams/…"></label>
+        <button class="gcSave">Save</button><button class="ghost gcCancel">Cancel</button></div></td></tr></tbody>`;
+  }).join('')}</table>` : `<p class="note">${SNAP?.meta?.schedulePending ? 'No registered teams are available for this tournament yet.' : 'No opponents in the current tournament snapshot.'}</p>`;
+}
+function gameChangerResultsHtml(candidates) {
+  return candidates.length ? candidates.map(candidate => {
+    const matches = [candidate.cityMatch && 'city', candidate.coachMatch && 'coach', candidate.ageMatch && 'age'].filter(Boolean);
+    return `<div class="gc-result"><div class="gc-result-info"><a href="${esc(candidate.url)}" target="blank"><strong>${esc(candidate.name)}</strong> ↗</a><div class="gc-meta">${esc([candidate.city, candidate.state].filter(Boolean).join(', '))} · ${esc(candidate.season)} ${esc(candidate.year || '')}${matches.length ? ` · Matches: ${matches.join(', ')}` : ''}${candidate.autoMatch ? ' · Strong match' : ''}</div></div><button class="gcChoose" data-url="${esc(candidate.url)}" data-name="${esc(candidate.name)}">Use</button></div>`;
+  }).join('') : '<p class="note">No GameChanger teams found.</p>';
+}
+$('#gcFindAll')?.addEventListener('click', async () => {
+  if (!await confirmAction('Search all opponents', 'Search GameChanger and save teams with one clear match based on name, age, city, and coach?')) return;
+  try {
+    const result = await api('autoFindGameChangerTeams', { gcToken:$('#gcToken').value.trim() });
+    const failed = result.failed?.length || 0;
+    toast(`Linked ${result.matched.length} team${result.matched.length === 1 ? '' : 's'}; ${failed ? `${failed} searches failed; ` : ''}${result.unresolved.length - failed} need review.`);
+    await refreshState();
+    const cards = new Map([...$('#gcTeams').querySelectorAll('tbody[data-team-id]')].map(card => [card.dataset.teamId, card]));
+    result.unresolved.forEach(row => {
+      const card = cards.get(row.teamId);
+      const results = card?.querySelector('.gc-results');
+      if (results) {
+        card.querySelector('.gc-detail').hidden = false;
+        card.querySelector('.gc-editor').hidden = true;
+        results.hidden = false;
+        if (row.error) results.textContent = row.error;
+        else results.innerHTML = gameChangerResultsHtml(row.candidates);
+      }
+    });
+  } catch (error) { toast(error.message, 'err'); }
+});
+$('#gcRefreshRecords')?.addEventListener('click', async () => {
+  if (!await confirmAction('Refresh GameChanger records', 'Pull current GameChanger records for all linked teams?')) return;
+  await run(() => api('refreshGameChangerRecords'), result => {
+    if (!result.updated && !result.failed) return 'No linked GameChanger teams to refresh.';
+    return `Updated ${result.updated} GameChanger record${result.updated === 1 ? '' : 's'}`
+      + (result.failed ? `; ${result.failed} unavailable` : '') + '.';
+  });
+});
+$('#gcTeams')?.addEventListener('click', async e => {
+  const card = e.target.closest('tbody[data-team-id]'); if (!card) return;
+  const teamId = card.dataset.teamId;
+  const name = gameChangerTeams().find(([id]) => id === teamId)?.[1] || teamId;
+  const detail = card.querySelector('.gc-detail');
+  const results = card.querySelector('.gc-results');
+  const editor = card.querySelector('.gc-editor');
+  if (e.target.classList.contains('gcSearch')) {
+    detail.hidden = false; editor.hidden = true; results.hidden = false;
+    results.textContent = 'Searching GameChanger…';
+    try {
+      const found = await api('searchGameChangerTeam', { teamId, gcToken:$('#gcToken').value.trim() });
+      results.innerHTML = gameChangerResultsHtml(found.candidates);
+    } catch (error) { results.textContent = error.message; }
+  } else if (e.target.classList.contains('gcEdit')) {
+    detail.hidden = false; results.hidden = true; editor.hidden = false;
+    editor.querySelector('.gcName').focus();
+  } else if (e.target.classList.contains('gcCancel')) {
+    detail.hidden = true;
+  } else if (e.target.classList.contains('gcChoose')) {
+    const url = e.target.dataset.url;
+    const gcName = e.target.dataset.name;
+    if (!await confirmAction('Save GameChanger link', `Link ${name} to ${url}?`)) return;
+    await run(() => api('setGameChangerTeamLink', { teamId, url, name:gcName }), 'GameChanger link saved');
+  } else if (e.target.classList.contains('gcSave')) {
+    const url = editor.querySelector('.gcUrl').value.trim();
+    const gcName = editor.querySelector('.gcName').value.trim();
+    if (!gcName) return toast('Enter the GameChanger team name', 'err');
+    if (!url) return toast('Enter a GameChanger team link', 'err');
+    if (!await confirmAction('Save GameChanger link', `Link ${name} to ${gcName} (${url})?`)) return;
+    await run(() => api('setGameChangerTeamLink', { teamId, url, name:gcName }), 'GameChanger link saved');
+  } else if (e.target.classList.contains('gcClear')) {
+    if (!await confirmAction('Clear GameChanger link', `Remove the GameChanger link for ${name}?`)) return;
+    await run(() => api('clearGameChangerTeamLink', { teamId }), 'GameChanger link cleared');
+  }
+});
+
+// ---------- config ----------
+function fillConfig() {
+  const c = cfg();                       // per-event slice
+  const g = (STATE && STATE.config) || {}; // team-wide root (snacks, team count)
+  $('#cfgSnacks').value = g.snacksUrl || '';
+  $('#cfgGameChanger').value = g.gameChangerUrl || '';
+  $('#cfgLinkTitle').value = c.customLink?.title || '';
+  $('#cfgLinkUrl').value = c.customLink?.url || '';
+}
+$('#saveCfg').onclick = async () => {
+  const config = {};
+  const s = v => v.trim();
+  config.snacksUrl = s($('#cfgSnacks').value);
+  config.gameChangerUrl = s($('#cfgGameChanger').value);
+  { const t = s($('#cfgLinkTitle').value), u = s($('#cfgLinkUrl').value); config.customLink = (t && u) ? { title: t, url: u } : null; }
+  if (!await confirmAction('Save config', 'Save these link/config changes? Open tabs will reload within ~60s.')) return;
+  await run(() => api('setEventConfig', { config }), 'Config saved');
+};
+
+// ---------- season ----------
+function chronologicalSeasonRows(rows, datesForRow) {
+  return rows.map((row, index) => ({ row, index, startDate:datesForRow(row)?.startDate || '' }))
+    .sort((a, b) => {
+      if (!a.startDate) return b.startDate ? 1 : a.index - b.index;
+      if (!b.startDate) return -1;
+      return a.startDate.localeCompare(b.startDate) || a.index - b.index;
+    }).map(item => item.row);
+}
+function initSeason() {
+  // A season record's own list is authoritative even when empty (e.g. its last tournament was just
+  // deleted) — only fall back when the record has no list at all.
+  SEASON = Array.isArray(STATE.season?.seasonData) ? structuredClone(STATE.season.seasonData)
+         : STATE.config?.seasonData?.length ? structuredClone(STATE.config.seasonData)
+         : SNAP && Array.isArray(SNAP.seasonData) && SNAP.seasonData.length ? structuredClone(SNAP.seasonData)
+         : [];
+  SEASON = chronologicalSeasonRows(SEASON, row => /^\d{4}-\d{2}-\d{2}$/.test(row.startDate || '')
+    ? row : tdLegacyDates(row.dates));
+  renderSeason(); renderArchiveStatus();
+}
+function seasonIsComplete() { return ['completed', 'archived'].includes(STATE.season?.status); }
+function renderArchiveStatus() {
+  const completed = seasonIsComplete();
+  $('#archiveStatus').innerHTML = completed
+    ? `<b>Completed</b><div class="note">Tournament data is frozen and score polling is stopped. The Homerun Derby remains playable and this season's leaderboard continues to accept new scores.</div>`
+    : '';
+  $('#archiveStatus').classList.toggle('hide', !completed);
+  $('#archiveSeason').classList.toggle('hide', completed);
+  $('#replaceArchive').classList.toggle('hide', !completed);
+  $('#reopenSeason').classList.toggle('hide', !completed);
+}
+function renderSeason() {
+  $('#seasonRows').innerHTML = SEASON.map((t, i) => {
+    const url = t.url || t.providerRef || '';
+    const urlHtml = /^https?:\/\//i.test(url)
+      ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>`
+      : esc(url || '—');
+    const active = t.key === STATE.season?.featuredEventKey ||
+      (!t.key && t.providerRef && t.providerRef === STATE.season?.events?.[STATE.season?.featuredEventKey]?.providerRef);
+    return `<div class="seasonrow" data-i="${i}">
+      <div class="season-summary">
+        <div class="details">
+          <div><b>${esc(t.name || 'Unnamed tournament')}</b>${active ? '<span class="badge active-tournament">ACTIVE TOURNAMENT</span>' : ''}</div>
+          <div>${esc(t.dates || 'Dates not set')} · ${esc(t.location || 'Location not set')}</div>
+          <div>${urlHtml}</div>
+        </div>
+        <div class="actions"><button class="sec sdEdit">Edit</button></div>
+      </div>
+    </div>`;
+  }).join('') || '<p class="note">No tournaments configured yet.</p>';
+}
+$('#addSeason').onclick = () => openTdEditor();
+$('#seasonRows').addEventListener('click', e => {
+  if (!e.target.classList.contains('sdEdit')) return;
+  const row = e.target.closest('.seasonrow');
+  openTdEditor(SEASON[Number(row.dataset.i)]);
+});
+$('#archiveSeason').onclick = async () => {
+  if (!await confirmAction('Complete season',
+    "Freeze tournament schedules, results, standings, placements, and final stats? Live tournament polling will stop. The Homerun Derby and this season's high scores will remain live.",
+    'Complete season', true)) return;
+  await run(async () => { const r=await api('completeSeason'); await loadAll(); return r; },
+    r => `Season completed · snapshot v${r.archiveVersion}`);
+};
+$('#replaceArchive').onclick = async () => {
+  if (!await confirmAction('Rebuild completed snapshot',
+    `Freeze a new corrected tournament snapshot? Snapshot v${STATE.season?.archiveVersion || 1} will remain intact. The mini-game leaderboard is unaffected.`,
+    'Create new version', true)) return;
+  await run(async () => { const r=await api('rebuildCompletedSeason'); await loadAll(); return r; },
+    r => `Completed snapshot v${r.archiveVersion} created`);
+};
+$('#reopenSeason').onclick = async () => {
+  if (!await confirmAction('Reopen season',
+    'Return this season to draft? Existing completed snapshots remain unchanged. Set a tournament active, then set the team and season active to resume polling.',
+    'Reopen', true)) return;
+  await run(async () => { const r=await api('reopenSeason'); await loadAll(); return r; }, 'Season reopened');
+};
+
+// ---------- tournament editor (draft → optional detect → save) ----------
+let TD_DETECTION = null;
+let TD_EXISTING_EVENT = null;
+let TD_DETECTION_URL = null;
+let TD_ORIGINAL_URL = null;
+let TD_LEGACY_DATES = '';
+let TD_REDETECTED = false;      // true only after an explicit Detect click (forces setup on Save)
+let TD_AUTO_LOCATION = null;    // last Location value the pickers filled in, so a typed one is kept
+let TD_PICKER_LOAD = 0;         // guards the edit-mode picker load against a closed/reopened modal
+
+const tdStatusBadge = status => status === 'manual'
+  ? '<i class="fa-solid fa-pen" style="color:var(--accent)"></i> saved correction'
+  : status === 'detected'
+  ? '<i class="fa-solid fa-circle-check" style="color:var(--ok)"></i> detected'
+  : status === 'pending'
+  ? '<i class="fa-solid fa-hourglass-half" style="color:var(--warn)"></i> pending (schedule not published yet)'
+  : '<i class="fa-solid fa-triangle-exclamation" style="color:var(--danger)"></i> not found — pick manually';
+
+function tdLegacyDates(text) {
+  const year = Number(CTX.seasonKey?.match(/(?:19|20)\d{2}/)?.[0]);
+  const match = String(text || '').trim().match(/^([A-Za-z]{3,9})\s+(\d{1,2})(?:\s*[–-]\s*(?:([A-Za-z]{3,9})\s+)?(\d{1,2}))?(?:,?\s+\d{4})?$/);
+  if (!year || !match) return null;
+  const months = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+  const startMonth = months[match[1].slice(0, 3).toLowerCase()];
+  const endMonth = months[(match[3] || match[1]).slice(0, 3).toLowerCase()];
+  if (!startMonth || !endMonth) return null;
+  const iso = (month, day) => `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const startDate = iso(startMonth, Number(match[2]));
+  const endDate = iso(endMonth, Number(match[4] || match[2]));
+  return !Number.isNaN(new Date(startDate + 'T12:00:00').getTime()) && startDate <= endDate
+    ? { startDate, endDate } : null;
+}
+function tdUpdateDates() {
+  const start = $('#tdStartDate').value, end = $('#tdEndDate').value;
+  $('#tdLegacyDates').classList.toggle('hide', !!(start && end) || !TD_LEGACY_DATES);
+}
+$('#tdStartDate').onchange = tdUpdateDates;
+$('#tdEndDate').onchange = tdUpdateDates;
+function renderTdDetectedInfo(detection) {
+  const d = detection.detected;
+  const parts = [];
+  if (d.venue?.name) parts.push(`Detected venue: ${esc([d.venue.name, d.venue.city].filter(Boolean).join(', '))}`);
+  if (d.rulesUrl) parts.push(`<a href="${esc(d.rulesUrl)}" target="_blank" rel="noopener">Open detected rules</a>`);
+  const el = $('#tdDetectedInfo');
+  el.innerHTML = parts.join(' &nbsp;·&nbsp; ');
+  el.hidden = !parts.length;
+}
+
+// Result medal is derived from the finishing place, never hand-entered.
+function placementEmoji(place) {
+  const n = parseInt(place, 10);
+  return !(n >= 1) ? '' : n === 1 ? '🥇' : n === 2 ? '🥈' : n === 3 ? '🥉' : '🎖️';
+}
+// Mirrors isManualPlacement in lib/scores.js: saved overrides carry source:'manual'; older
+// hand-entered results have a numeric place (automatic captures use "2nd Place" text).
+const isManualPlacement = p => !!p && (p.source === 'manual' || (p.source == null && typeof p.place === 'number'));
+const fmtCoord = n => Number(n).toFixed(4);
+
+// Read-only "what the weather card uses without an override" line, from the tournament's last
+// setup (getState eventVenues) or, after Detect, the provider's detected venue.
+function renderTdVenueInfo(venue, source = 'Provider venue') {
+  const place = [venue?.name, venue?.city].filter(Boolean).join(', ');
+  const hasCoords = venue?.lat != null && venue?.lon != null;
+  $('#tdVenueInfo').textContent = hasCoords
+    ? `${source}: ${place || 'unnamed venue'} · ${fmtCoord(venue.lat)}, ${fmtCoord(venue.lon)}`
+    : place ? `${source}: ${place} · no coordinates yet — enter a lat/lon override for weather.`
+    : "The provider hasn't published a venue yet — weather appears once it does, or enter a lat/lon override.";
+  $('#tdLat').placeholder = hasCoords ? fmtCoord(venue.lat) : '37.5841';
+  $('#tdLon').placeholder = hasCoords ? fmtCoord(venue.lon) : '-122.3641';
+  $('#tdWx').placeholder = hasCoords ? `https://weather.com/weather/today/l/${venue.lat},${venue.lon}` : 'https://…';
+}
+
+function tdUpdatePlacementEmoji() {
+  const n = parseInt($('#tdPlPlace').value, 10), el = $('#tdPlTrophy');
+  el.className = 'result-trophy' + (n >= 1 ? ` place-${n <= 3 ? n : 'other'}` : '');
+  el.innerHTML = n >= 1 ? `<i class="fa-solid ${n <= 3 ? 'fa-trophy' : 'fa-medal'}" title="Place ${n}"></i>` : '—';
+}
+$('#tdPlPlace').oninput = tdUpdatePlacementEmoji;
+
+function tdEventForRow(row) {
+  if (!row) return null;
+  return STATE.season?.events?.[row.key] || Object.values(STATE.season?.events || {})
+    .find(event => row.providerRef && event.providerRef === row.providerRef) || null;
+}
+
+function closeTdEditor() {
+  $('#tdModalBg').classList.remove('show');
+  TD_PICKER_LOAD++;
+  TD_REDETECTED = false;
+  TD_AUTO_LOCATION = null;
+  TD_DETECTION = null;
+  TD_EXISTING_EVENT = null;
+  TD_DETECTION_URL = null;
+  TD_LEGACY_DATES = '';
+}
+
+function openTdEditor(row = null) {
+  const event = tdEventForRow(row);
+  const config = event?.config || {};
+  const placement = config.knownPlacement || {};
+  TD_DETECTION = null;
+  TD_DETECTION_URL = null;
+  TD_REDETECTED = false;
+  TD_AUTO_LOCATION = null;
+  TD_EXISTING_EVENT = event;
+  $('#tdModalTitle').textContent = row ? 'Edit tournament' : 'Add tournament';
+  $('#tdUrl').value = row?.url || event?.providerRef || '';
+  TD_ORIGINAL_URL = $('#tdUrl').value.trim();
+  $('#tdName').value = row?.name || event?.name || '';
+  $('#tdKey').value = row?.key || event?.key || '';
+  $('#tdKey').readOnly = !!event;
+  TD_LEGACY_DATES = row && !(row.startDate && row.endDate) ? row.dates || '' : '';
+  $('#tdDates').value = TD_LEGACY_DATES;
+  const calendar = row?.startDate && row?.endDate ? row : tdLegacyDates(row?.dates);
+  $('#tdStartDate').value = calendar?.startDate || '';
+  $('#tdEndDate').value = calendar?.endDate || '';
+  tdUpdateDates();
+  $('#tdLocation').value = row?.location || '';
+  $('#tdRules').value = config.rulesUrl || '';
+  $('#tdWx').value = config.accuweatherUrl || '';
+  $('#tdLat').value = config.venue?.lat ?? '';
+  $('#tdLon').value = config.venue?.lon ?? '';
+  // Weather + result only exist once the tournament is saved (setup / the score check fill them).
+  $('#tdAddNote').classList.toggle('hide', !!event);
+  $('#tdWeatherPanel').classList.toggle('hide', !event);
+  $('#tdResultPanel').classList.toggle('hide', !event);
+  // Both start collapsed; the summary flags an active override so it isn't hidden unnoticed.
+  $('#tdWeatherPanel').open = false;
+  $('#tdResultPanel').open = false;
+  $('#tdWeatherHint').textContent = config.accuweatherUrl || config.venue?.lat != null || config.venue?.lon != null ? '· override set' : '';
+  renderTdVenueInfo(event ? STATE.eventVenues?.[event.key] : null);
+  // The fields hold only an admin override; the automatic result is shown read-only above them.
+  const manualPlacement = isManualPlacement(placement) ? placement : null;
+  const autoPlacement = config.autoPlacement || (manualPlacement ? null : config.knownPlacement) || null;
+  $('#tdAutoResult').textContent = autoPlacement
+    ? `Automatic result: ${[autoPlacement.place, autoPlacement.label].filter(Boolean).join(' · ')}${manualPlacement ? ' (overridden below)' : ''}`
+    : "No automatic result yet — it's captured when our bracket games finish.";
+  $('#tdResultHint').textContent = manualPlacement ? '· override set' : '';
+  $('#tdPlPlace').value = manualPlacement?.place ?? '';
+  tdUpdatePlacementEmoji();
+  $('#tdPlLabel').value = manualPlacement?.label || '';
+  $('#tdDetectedInfo').hidden = true;
+  $('#tdDetectionFields').classList.add('hide');
+  $('#tdDelete').classList.toggle('hide', !event);
+  $('#tdSaveActive').disabled = seasonIsComplete();
+  $('#tdModalBg').classList.add('show');
+  if (event && TD_ORIGINAL_URL) tdLoadPickers(event);
+}
+
+// Editing a saved tournament: the division/region + team options aren't stored, so fetch them
+// (read-only detectEvent) and show the pickers with the saved picks selected. Unlike Detect this
+// never touches name/dates/location/rules, and doesn't mark the draft as re-detected — Save still
+// skips setup unless a pick actually changes.
+async function tdLoadPickers(event) {
+  const load = ++TD_PICKER_LOAD;
+  const url = TD_ORIGINAL_URL;
+  $('#tdDetectionFields').classList.remove('hide');
+  $('#tdDiv').innerHTML = '<option value="">Loading…</option>';
+  $('#tdTeam').innerHTML = '<option value="">Loading…</option>';
+  $('#tdDiv').disabled = $('#tdTeam').disabled = true;
+  $('#tdSisters').innerHTML = '';
+  $('#tdIssues').textContent = 'Loading division and team options from the provider…';
+  try {
+    const detection = await api('detectEvent', { providerRef:url });
+    if (load !== TD_PICKER_LOAD || $('#tdUrl').value.trim() !== url) return;
+    TD_DETECTION = detection;
+    TD_DETECTION_URL = url;
+    renderTdDetectionFields(detection, event.discovery?.manual || {});
+  } catch (error) {
+    if (load !== TD_PICKER_LOAD) return;
+    $('#tdDetectionFields').classList.add('hide');
+    toast(`Couldn't load division/team options: ${error.message}`, 'err');
+  } finally {
+    if (load === TD_PICKER_LOAD) $('#tdDiv').disabled = $('#tdTeam').disabled = false;
+  }
+}
+
+// Fill Location from a region/team pick, unless the admin typed their own value.
+function tdAutoLocation(value, detection) {
+  if (!value) return;
+  const current = $('#tdLocation').value.trim();
+  const derived = new Set([TD_AUTO_LOCATION, ...(detection.candidates.regions || []),
+    ...Object.values(detection.candidates.locations || {}), ...(detection.candidates.teams || []).map(team => team.location)]
+    .filter(Boolean));
+  if (!current || derived.has(current)) $('#tdLocation').value = value;
+  TD_AUTO_LOCATION = value;
+}
+
+const byName = (a, b) => String(a ?? '').localeCompare(String(b ?? ''), undefined, { sensitivity:'base', numeric:true });
+
+function renderTdDetectionFields(detection, manual = {}) {
+  $('#tdSistersRow').hidden = detection.provider === 'ast';
+  // A saved correction is the answer for that field — show it as such rather than re-reporting the
+  // fresh detection's "not found" (and drop the issue text once every missing field is corrected).
+  const status = (field, manualValue) => manualValue != null && manualValue !== '' && !(Array.isArray(manualValue) && !manualValue.length)
+    ? 'manual' : detection.fieldStatus[field];
+  if (detection.provider === 'ast') {
+    const regions = detection.candidates.regions || [];
+    const teams = detection.candidates.teams || [];
+    const selectedRegion = manual.region ?? detection.detected.region ?? '';
+    $('#tdDivLabel').innerHTML = `Region — ${tdStatusBadge(status('region', manual.region))}`;
+    $('#tdDiv').innerHTML = '<option value="">— pick a region —</option>' + [...regions].sort(byName).map(region =>
+      `<option value="${esc(region)}"${region === selectedRegion ? ' selected' : ''}>${esc(region)}</option>`).join('');
+    const renderTeamOptions = () => {
+      const teamsInRegion = teams.filter(team => team.divisionId === $('#tdDiv').value);
+      const selectedTeam = manual.teamName ?? detection.detected.teamName ?? '';
+      const option = team =>
+        `<option value="${esc(team.name)}" data-age="${esc(team.age ?? '')}"${team.name === selectedTeam ? ' selected' : ''}>${esc(team.name)}${team.ageMatch === false && team.age != null ? ` (${esc(team.age)}U)` : ''}</option>`;
+      // Alphabetical, our age group first; other age groups follow in their own group.
+      const ours = teamsInRegion.filter(team => team.ageMatch !== false).sort((a, b) => byName(a.name, b.name));
+      const others = teamsInRegion.filter(team => team.ageMatch === false).sort((a, b) => byName(a.name, b.name));
+      $('#tdTeam').innerHTML = '<option value="">— pick our team —</option>'
+        + (others.length && ours.length ? `<optgroup label="${esc(detection.detected.age ? `${detection.detected.age}U` : 'Our age')}">${ours.map(option).join('')}</optgroup>` : ours.map(option).join(''))
+        + (others.length ? `<optgroup label="Other ages">${others.map(option).join('')}</optgroup>` : '');
+    };
+    renderTeamOptions();
+    $('#tdDiv').onchange = () => {
+      renderTeamOptions();
+      const region = $('#tdDiv').value;
+      tdAutoLocation(detection.candidates.locations?.[region] || region, detection);
+    };
+    // A team from another age group can play somewhere else in the region.
+    $('#tdTeam').onchange = () => {
+      const picked = teams.find(team => team.divisionId === $('#tdDiv').value && team.name === $('#tdTeam').value);
+      if (picked?.location) tdAutoLocation(picked.location, detection);
+    };
+    $('#tdTeamLabel').innerHTML = `Our team — ${tdStatusBadge(status('team', manual.teamName))}`;
+  } else {
+    $('#tdTeam').onchange = null;
+    const divs = detection.candidates.divisions || [];
+    const teams = detection.candidates.teams || [];
+    const selectedDiv = manual.divisionIds?.[0] ?? detection.detected.divisionIds?.[0] ?? '';
+    $('#tdDivLabel').innerHTML = `Division — ${tdStatusBadge(status('divisions', manual.divisionIds))}`;
+    $('#tdDiv').innerHTML = '<option value="">— pick a division —</option>' + divs.map(div =>
+      `<option value="${esc(div.id)}"${div.id === selectedDiv ? ' selected' : ''}>${esc(div.name)}${div.hasSchedule ? '' : ' (schedule not posted)'}</option>`).join('');
+    const renderTeamOptions = () => {
+      const teamsInDiv = teams.filter(team => team.divisionId === $('#tdDiv').value).sort((a, b) => byName(a.name, b.name));
+      const selectedTeam = manual.providerTeamId ?? detection.detected.providerTeamId ?? '';
+      $('#tdTeam').innerHTML = '<option value="">— pick our team —</option>' + teamsInDiv.map(team =>
+        `<option value="${esc(team.id)}"${team.id === selectedTeam ? ' selected' : ''}>${esc(team.name)}</option>`).join('');
+    };
+    const initialSisters = new Set(manual.sisterDivisionIds ?? detection.detected.sisterDivisionIds ?? []);
+    const renderSisters = (checked = initialSisters) => {
+      const primary = $('#tdDiv').value;
+      const primaryAges = divs.find(div => div.id === primary)?.ages || [];
+      $('#tdSisters').innerHTML = divs.filter(div => div.id !== primary && div.ages.some(age => primaryAges.includes(age))).map(div =>
+        `<label style="display:inline-flex;align-items:center;gap:4px;margin:2px 10px 2px 0"><input type="checkbox" class="tdSister" value="${esc(div.id)}"${checked.has(div.id) ? ' checked' : ''}> ${esc(div.name)}</label>`
+      ).join('') || '<span class="note">No other divisions at this age.</span>';
+    };
+    renderTeamOptions();
+    renderSisters();
+    $('#tdDiv').onchange = () => {
+      const checked = new Set([...document.querySelectorAll('.tdSister:checked')].map(input => input.value));
+      renderTeamOptions();
+      renderSisters(checked);
+    };
+    $('#tdTeamLabel').innerHTML = `Our team — ${tdStatusBadge(status('team', manual.providerTeamId))}`;
+  }
+  const unresolved = detection.provider === 'ast'
+    ? [status('region', manual.region), status('team', manual.teamName)]
+    : [status('divisions', manual.divisionIds), status('team', manual.providerTeamId)];
+  $('#tdIssues').textContent = unresolved.every(value => value === 'manual' || value === 'detected') ? '' : detection.issues.join(' ');
+  $('#tdDetectionFields').classList.remove('hide');
+}
+
+async function tdDetect() {
+  const url = $('#tdUrl').value.trim();
+  if (!url) return toast('Enter a NorCal, AST, or Tourney Machine tournament URL or id', 'err');
+  try {
+    TD_PICKER_LOAD++;   // an explicit Detect supersedes an in-flight edit-mode picker load
+    const detection = await api('detectEvent', { providerRef:url });
+    TD_DETECTION = detection;
+    TD_DETECTION_URL = url;
+    TD_REDETECTED = true;
+    $('#tdDiv').disabled = $('#tdTeam').disabled = false;
+    const key = $('#tdKey').value.trim();
+    $('#tdName').value = detection.detected.name || '';
+    $('#tdKey').value = key || keyFromName(detection.detected.name || detection.providerRef || url, '');
+    $('#tdStartDate').value = detection.detected.dates?.[0] || '';
+    $('#tdEndDate').value = detection.detected.dates?.at(-1) || '';
+    tdUpdateDates();
+    $('#tdLocation').value = detection.detected.venue?.city ?? detection.detected.venue?.name ?? '';
+    TD_AUTO_LOCATION = $('#tdLocation').value || null;
+    $('#tdRules').value = detection.detected.rulesUrl || '';
+    // Weather/result overrides are the admin's own values — Detect only refreshes the provider
+    // venue shown above them (used as the lat/lon placeholders), never the overrides themselves.
+    if (detection.detected.venue) renderTdVenueInfo(detection.detected.venue, 'Detected venue');
+    renderTdDetectedInfo(detection);
+    renderTdDetectionFields(detection);
+    toast('Detected — review the draft, then click Save');
+  } catch (error) { toast(error.message, 'err'); }
+}
+$('#tdDetect').onclick = () => tdDetect();
+$('#tdCancel').onclick = closeTdEditor;
+
+// Only sends the fields the admin actually changed from the last detection — an untouched field
+// keeps following automatic re-detection on every later rebuild instead of freezing at today's pick.
+function tdManualPayload() {
+  if (!TD_DETECTION) return TD_EXISTING_EVENT?.discovery?.manual || {};
+  const d = TD_DETECTION.detected;
+  if (TD_DETECTION.provider === 'ast') {
+    const region = $('#tdDiv').value || null;
+    const teamName = $('#tdTeam').value || null;
+    const pickedAge = Number($('#tdTeam').selectedOptions[0]?.dataset.age) || null;
+    const manual = {};
+    if (region !== (d.region ?? null)) manual.region = region;
+    if (teamName !== (d.teamName ?? null)) manual.teamName = teamName;
+    // A team picked from another age group's list (labeled "(12U)") builds from that age.
+    if (teamName && pickedAge && pickedAge !== d.age) manual.age = pickedAge;
+    return manual;
+  }
+  const divisionIds = $('#tdDiv').value ? [$('#tdDiv').value] : [];
+  const sisterDivisionIds = [...document.querySelectorAll('.tdSister:checked')].map(c => c.value).sort();
+  const providerTeamId = $('#tdTeam').value || null;
+  const manual = {};
+  if (JSON.stringify(divisionIds) !== JSON.stringify(d.divisionIds || [])) manual.divisionIds = divisionIds;
+  if (JSON.stringify(sisterDivisionIds) !== JSON.stringify((d.sisterDivisionIds || []).slice().sort())) manual.sisterDivisionIds = sisterDivisionIds;
+  if (providerTeamId !== (d.providerTeamId ?? null)) manual.providerTeamId = providerTeamId;
+  return manual;
+}
+async function tdSave(makeActive = false) {
+  const providerRef = $('#tdUrl').value.trim();
+  if (!providerRef) return toast('Enter a tournament URL', 'err');
+  const requiredFields = [
+    ['tdName', 'Name'], ['tdKey', 'Tournament key'], ['tdStartDate', 'Start date'],
+    ['tdEndDate', 'End date'], ['tdLocation', 'Location'],
+  ];
+  const missing = requiredFields.filter(([id]) => !$('#' + id).value.trim());
+  if (missing.length) {
+    $('#' + missing[0][0]).focus();
+    return toast(`Complete required fields: ${missing.map(([, label]) => label).join(', ')}.`, 'err');
+  }
+  const name = $('#tdName').value.trim();
+  const newEventKey = $('#tdKey').value.trim();
+  if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(newEventKey)) { toast('Tournament key must use lowercase letters, numbers, and hyphens', 'err'); return null; }
+  if ((TD_DETECTION_URL && TD_DETECTION_URL !== providerRef) ||
+      (TD_EXISTING_EVENT && providerRef !== TD_ORIGINAL_URL && TD_DETECTION_URL !== providerRef))
+    return toast('Run Detect after changing the tournament URL.', 'err');
+  const startDate = $('#tdStartDate').value, endDate = $('#tdEndDate').value;
+  if (endDate < startDate) return toast('End date must be on or after the start date.', 'err');
+  const lat = $('#tdLat').value, lon = $('#tdLon').value;
+  const label = $('#tdPlLabel').value.trim(), place = $('#tdPlPlace').value;
+  // Adding a tournament sends no overrides at all; editing sends the override fields as they stand
+  // (blank = no override — the server falls back to the provider venue / automatic result).
+  const config = TD_EXISTING_EVENT ? {
+    accuweatherUrl:$('#tdWx').value.trim(),
+    venue:(lat !== '' || lon !== '') ? { lat:lat !== '' ? Number(lat) : undefined, lon:lon !== '' ? Number(lon) : undefined } : null,
+    knownPlacement:(label || place !== '') ? { label, emoji:placementEmoji(place), place:place !== '' ? Number(place) : null } : null,
+  } : {};
+  let warning = '';
+  if (makeActive) {
+    if (seasonIsComplete()) return toast('Reopen this completed season first.', 'err');
+    try {
+      const detection = TD_DETECTION_URL === providerRef ? TD_DETECTION : await api('detectEvent', { providerRef });
+      if (!detection.schedulePublished) warning = '\n\nWarning: the provider schedule is unpublished. You can still set this tournament active.';
+    } catch (error) { return toast(error.message, 'err'); }
+  }
+  const previous = STATE.season?.events?.[STATE.season?.featuredEventKey];
+  const live = STATE.season?.status === 'active' && CTX.teamKey === CATALOG?.defaultTeamKey &&
+    CTX.seasonKey === CATALOG?.teams?.[CATALOG.defaultTeamKey]?.defaultSeasonKey;
+  const sourceWarning = TD_EXISTING_EVENT && newEventKey === TD_EXISTING_EVENT.key && providerRef !== TD_ORIGINAL_URL
+    ? '\n\nIf this URL points to a different tournament source, its saved scores and manual overrides will be cleared.'
+    : '';
+  const message = makeActive
+    ? `Save "${name || 'this tournament'}" and set it active for ${STATE.team.name} · ${STATE.season.name}? It will replace ${previous?.name || 'no active tournament'}. This team/season is ${live ? 'currently site-wide active' : 'not site-wide active; use Team & season → Set Active separately'}.${warning}${sourceWarning}`
+    : `${TD_EXISTING_EVENT ? 'Save changes to' : 'Add'} "${name || 'this tournament'}" for ${STATE.team.name} · ${STATE.season.name}? This updates the public tournament list. The site will set up or refresh its schedule and venue from the tournament website when needed. Open tabs will reload within ~60s.${sourceWarning}`;
+  if (!await confirmAction(makeActive ? 'Save & Set Active' : 'Save tournament', message,
+    makeActive ? 'Save & Set Active' : 'Save')) return null;
+  return run(async () => rememberSeason(await api('saveEvent', {
+    providerRef, newEventKey, name,
+    existingEventKey:TD_EXISTING_EVENT?.key || undefined,
+    startDate, endDate, location: $('#tdLocation').value.trim(), makeActive,
+    rulesUrl:$('#tdRules').value.trim(), config, manual:tdManualPayload(), redetected:TD_REDETECTED,
+  })), r => makeActive ? `Active tournament: ${r.name}` : `Saved: ${r.name}`);
+}
+$('#tdSave').onclick = async () => { if (await tdSave()) closeTdEditor(); };
+$('#tdSaveActive').onclick = async () => { if (await tdSave(true)) closeTdEditor(); };
+$('#tdDelete').onclick = async () => {
+  if (!TD_EXISTING_EVENT) return;
+  const deletingActive = TD_EXISTING_EVENT.key === STATE.season.featuredEventKey;
+  const consequence = deletingActive ? ' It is currently active; the season will have no active tournament until another is set active.' : '';
+  if (!await confirmAction('Delete tournament', `Delete "${TD_EXISTING_EVENT.name}" and its stored scores/configuration?${consequence}`, 'Delete', true)) return;
+  const eventKey = TD_EXISTING_EVENT.key;
+  const deleted = await run(async () => { const result = rememberSeason(await api('deleteEvent', { eventKey })); CTX.eventKey = null; return result; }, 'Tournament deleted');
+  if (deleted) closeTdEditor();
+};
+
+// ---------- ops ----------
+$('#opPull').onclick = async () => {
+  if (!await confirmAction('Pull scores now', 'Fetch the latest scores from the active tournament website right now and update everyone\'s view?')) return;
+  await run(async () => { const r = await api('pullScores'); await loadAll(); return r; }, 'Scores pulled');
+};
+$('#opRefresh').onclick = async () => {
+  if (!await confirmAction('Force refresh', 'Reload every open tab within ~60s (no notification)?')) return;
+  await run(() => api('refresh'), 'Refresh queued');
+};
+$('#opSetup').onclick = async () => {
+  if (!await confirmAction('Re-run setup', 'Re-discover the current tournament from its website and update its schedule structure?')) return;
+  await run(async () => {
+    let r = await api('runSetup');
+    if (r.requiresConfirmation) {
+      const c = r.changes || {};
+      const ok = await confirmAction('Confirm schedule changes',
+        `The website removed ${c.removed?.length || 0} game(s) and added ${c.added?.length || 0}. This may indicate renumbering.${c.replaced?.length ? ` ${c.replaced.length} game identities changed; their old scores and manual overrides will be cleared.` : ''}${c.orphanOverrides?.length ? ` ${c.orphanOverrides.length} removed game(s) have manual overrides that will be retained but no longer displayed.` : ''} Apply the new structure?`,
+        'Apply changes', true);
+      if (!ok) return { cancelled:true };
+      r = await api('runSetup', { confirmRemovals:true });
+    }
+    await loadAll(); return r;
+  }, r => r?.cancelled ? 'Setup cancelled' : `Setup updated · ${r?.changes?.added?.length || 0} added · ${r?.changes?.removed?.length || 0} removed · ${r?.changes?.changed?.length || 0} changed`);
+};
+// ---------- Homerun Derby roster (per team + season) ----------
+const MG_TONES = [['light', 'Light'], ['tan', 'Tan'], ['brown', 'Brown']];
+const MG_HAIRS = [['brown', 'Brown'], ['blond', 'Blond'], ['black', 'Black'], ['red', 'Red']];
+let MG_ROSTER_DRAFT = [];
+const mgContextLabel = () => `${STATE?.team?.name || CTX.teamKey} · ${STATE?.season?.name || CTX.seasonKey}`;
+function closeMiniGameImport() { $('#mgImportBg').classList.remove('show'); }
+function closeMiniGameEditor() { closeMiniGameImport(); $('#mgModalBg').classList.remove('show'); }
+function renderMiniGameSummary() {
+  const roster = STATE?.miniGameRoster || [];
+  $('#mgCard').hidden = !STATE?.season;
+  $('#mgRosterContext').textContent = mgContextLabel();
+  $('#mgRosterSummary').innerHTML = roster.length
+    ? `<b>${roster.length} player${roster.length === 1 ? '' : 's'}</b><br>${roster.map(p => `${esc(p.name)}${p.number != null ? ` #${esc(p.number)}` : ''}`).join(' · ')}`
+    : 'No roster — the game is hidden for this team and season.';
+}
+function mgOptions(list, selected) {
+  return list.map(([value, label]) => `<option value="${value}"${value === selected ? ' selected' : ''}>${label}</option>`).join('');
+}
+function renderMiniGameRoster() {
+  $('#mgModalContext').textContent = mgContextLabel();
+  $('#mgRosterRows').innerHTML = MG_ROSTER_DRAFT.map((p, i) => `<tr data-i="${i}">
+    <td><input type="text" class="mgName" maxlength="20" value="${esc(p.name)}" placeholder="Player name"></td>
+    <td><input type="number" class="mgNumber" min="0" max="99" value="${p.number ?? ''}"></td>
+    <td><select class="mgTone">${mgOptions(MG_TONES, p.tone || 'light')}</select></td>
+    <td><select class="mgHair">${mgOptions(MG_HAIRS, p.hair || 'brown')}</select></td>
+    <td class="mg-check"><input type="checkbox" class="mgBatsL"${p.batsL ? ' checked' : ''} aria-label="Bats left"></td>
+    <td class="mg-check"><input type="checkbox" class="mgFieldsL"${p.fieldsL ? ' checked' : ''} aria-label="Throws left"></td>
+    <td><button class="ghost mgRemove" aria-label="Remove ${esc(p.name || 'player')}">Remove</button></td>
+  </tr>`).join('');
+  $('#mgRosterEmpty').classList.toggle('hide', MG_ROSTER_DRAFT.length > 0);
+  $('#mgAddPlayer').disabled = MG_ROSTER_DRAFT.length >= 30;
+}
+function renderMiniGameImportSources() {
+  $('#mgImportContext').textContent = `Import into ${mgContextLabel()}`;
+  const importSelection = $('#mgImportSeason').value;
+  const sources = Object.entries(CATALOG?.teams || {}).flatMap(([teamKey, team]) =>
+    Object.entries(team.seasons || {}).map(([seasonKey, season]) => ({
+      teamKey, seasonKey, teamName:team.name || teamKey, seasonName:season.name || seasonKey,
+    }))).filter(source => source.teamKey !== CTX.teamKey || source.seasonKey !== CTX.seasonKey);
+  $('#mgImportSeason').innerHTML = sources.length
+    ? sources.map(source => {
+      const key = `${source.teamKey}:${source.seasonKey}`;
+      return `<option value="${esc(key)}"${key === importSelection ? ' selected' : ''}>${esc(source.teamName)} · ${esc(source.seasonName)}</option>`;
+    }).join('')
+    : '<option value="">No other teams or seasons</option>';
+  $('#mgImportRoster').disabled = !sources.length;
+}
+// Read the editable rows back into the draft (keeps unsaved edits when adding/removing rows).
+function readMiniGameRoster() {
+  MG_ROSTER_DRAFT = [...document.querySelectorAll('#mgRosterRows tr')].map(row => ({
+    name: row.querySelector('.mgName').value,
+    number: row.querySelector('.mgNumber').value === '' ? null : Number(row.querySelector('.mgNumber').value),
+    tone: row.querySelector('.mgTone').value,
+    hair: row.querySelector('.mgHair').value,
+    batsL: row.querySelector('.mgBatsL').checked,
+    fieldsL: row.querySelector('.mgFieldsL').checked,
+  }));
+  return MG_ROSTER_DRAFT;
+}
+function initMiniGameRoster() {
+  renderMiniGameSummary();
+  MG_ROSTER_DRAFT = structuredClone(STATE?.miniGameRoster || []);
+  if ($('#mgModalBg').classList.contains('show')) renderMiniGameRoster();
+}
+$('#mgEditRoster').onclick = () => {
+  MG_ROSTER_DRAFT = structuredClone(STATE?.miniGameRoster || []);
+  renderMiniGameRoster();
+  $('#mgModalBg').classList.add('show');
+  $('#mgCancelRoster').focus();
+};
+$('#mgCancelRoster').onclick = closeMiniGameEditor;
+$('#mgOpenImport').onclick = () => {
+  renderMiniGameImportSources();
+  $('#mgImportBg').classList.add('show');
+  ($('#mgImportRoster').disabled ? $('#mgCancelImport') : $('#mgImportSeason')).focus();
+};
+$('#mgCancelImport').onclick = () => { closeMiniGameImport(); $('#mgOpenImport').focus(); };
+$('#mgAddPlayer').onclick = () => {
+  readMiniGameRoster();
+  MG_ROSTER_DRAFT.push({ name:'', number:null, tone:'light', hair:'brown', batsL:false, fieldsL:false });
+  renderMiniGameRoster();
+  document.querySelector('#mgRosterRows tr:last-child .mgName')?.focus();
+};
+$('#mgRosterRows').addEventListener('click', e => {
+  if (!e.target.classList.contains('mgRemove')) return;
+  readMiniGameRoster();
+  MG_ROSTER_DRAFT.splice(Number(e.target.closest('tr').dataset.i), 1);
+  renderMiniGameRoster();
+});
+$('#mgImportRoster').onclick = async () => {
+  const sourceKey = $('#mgImportSeason').value;
+  const [sourceTeamKey, sourceSeasonKey] = sourceKey.split(':');
+  if (!sourceTeamKey || !sourceSeasonKey) return;
+  const editingTeamKey = CTX.teamKey, editingSeasonKey = CTX.seasonKey;
+  const sourceName = $('#mgImportSeason').selectedOptions[0]?.textContent || 'the selected season';
+  if (!await confirmAction('Replace roster in editor', `Import the roster from ${sourceName}? This will replace all players and settings currently in the editor. The change will not be saved until you click Save roster.`, 'Import')) return;
+  if (CTX.teamKey !== editingTeamKey || CTX.seasonKey !== editingSeasonKey ||
+      $('#mgImportSeason').value !== sourceKey || !$('#mgImportBg').classList.contains('show')) return;
+  $('#mgImportRoster').disabled = true;
+  try {
+    const { roster } = await api('getMiniGameRoster', { teamKey:sourceTeamKey, seasonKey:sourceSeasonKey, eventKey:null });
+    if (CTX.teamKey !== editingTeamKey || CTX.seasonKey !== editingSeasonKey ||
+        $('#mgImportSeason').value !== sourceKey || !$('#mgImportBg').classList.contains('show') ||
+        !$('#mgModalBg').classList.contains('show')) return;
+    if (!roster?.length) return toast('That season has no roster to import', 'err');
+    MG_ROSTER_DRAFT = structuredClone(roster);
+    renderMiniGameRoster();
+    closeMiniGameImport();
+    $('#mgOpenImport').focus();
+    toast(`Imported ${roster.length} player${roster.length === 1 ? '' : 's'} — review, then Save roster`);
+  } catch (e) { toast(e.message, 'err'); }
+  finally { $('#mgImportRoster').disabled = !$('#mgImportSeason').value; }
+};
+$('#mgSaveRoster').onclick = async () => {
+  const roster = readMiniGameRoster().filter(p => p.name.trim());
+  const names = roster.map(p => p.name.trim().toLowerCase());
+  const dupe = names.find((name, i) => names.indexOf(name) !== i);
+  if (dupe) return toast(`"${roster[names.indexOf(dupe)].name.trim()}" is on the roster more than once`, 'err');
+  const message = roster.length
+    ? `Save ${roster.length} player${roster.length === 1 ? '' : 's'} for the Homerun Derby on ${mgContextLabel()}? Open tabs will reload within ~60s.`
+    : `Save an empty roster? The Homerun Derby will be hidden on ${mgContextLabel()}.`;
+  if (!await confirmAction('Save roster', message)) return;
+  const saved = await run(async () => rememberSeason(await api('setMiniGameRoster', { roster })), 'Roster saved');
+  if (saved) closeMiniGameEditor();
+};
+$('#opResetHs').onclick = async () => {
+  if (!await confirmAction('Reset high scores', `Permanently clear the Homerun Derby leaderboard for ${mgContextLabel()}? Other teams and seasons keep theirs. This cannot be undone.`, 'Reset scores', true)) return;
+  await run(() => api('resetHighScores'), 'High scores reset');
+};
+$('#opBroadcast').onclick = async () => {
+  const title = $('#bcTitle').value.trim(), body = $('#bcBody').value.trim(), refresh = $('#bcRefresh').checked;
+  if (!title && !refresh) return toast('Enter a title', 'err');
+  const n = STATE.subscriberCount || 0;
+  if (!await confirmAction('Send push', `Push to ${n} subscriber device(s):\n\n${title}${body ? '\n' + body : ''}${refresh ? '\n\n(+ reload tabs)' : ''}`, 'Send', true)) return;
+  await run(async () => {
+    const r = await fetch('/notify?key=' + encodeURIComponent(adminKey()) + '&' + contextQuery(), {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body, refresh }),
+    });
+    const d = await r.json(); if (!r.ok || d.error) throw new Error(d.error || 'push failed');
+    return d;
+  }, 'Push sent');
+};
+
+function renderStatus() {
+  $('#statusGrid').innerHTML = `
+    <b>Active tournament</b><span>${(STATE.meta||{}).name || '—'} (${STATE.activeEventId})</span>
+    <b>Subscribers</b><span>${STATE.subscriberCount ?? '—'}</span>
+    <b>Overrides set</b><span>${Object.keys(overrides()).length}</span>
+    <b>Stream links</b><span>${Object.keys(streamLinks()).length}</span>
+    <b>Season state</b><span>${esc(STATE.season?.status || '—')}${STATE.season?.archiveVersion ? ` · snapshot v${STATE.season.archiveVersion}` : ''}</span>
+    <b>Snapshot rev</b><span>${(SNAP && SNAP.rev) || '—'}</span>`;
+}
+
+// ---------- helpers ----------
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+// Mirrors lib/context.js's keyFromName exactly — a client-side preview of the event key Save
+// will use if the Event key field is left blank, so the Tournaments card shows it up front
+// instead of only after saving (the server independently derives + validates the same way).
+function keyFromName(value, fallback = 'item') {
+  const key = String(value || '')
+    .normalize('NFKD').replace(/\p{Diacritic}/gu, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+  return key || fallback;
+}
+// The season record a tournament save/delete just wrote. A refresh right after can still read the
+// previous copy (Blobs reads are eventually consistent), so keep whichever is newer by updatedAt.
+let FRESH_SEASON = null;
+function rememberSeason(result) {
+  if (result?.season) FRESH_SEASON = result.season;
+  return result;
+}
+function preferFreshSeason() {
+  const fresh = FRESH_SEASON, current = STATE?.season;
+  if (!fresh || !current || fresh.teamKey !== current.teamKey || fresh.key !== current.key) return;
+  if ((current.updatedAt || '') >= (fresh.updatedAt || '')) { FRESH_SEASON = null; return; }
+  STATE.season = fresh;
+  STATE.config = { ...(STATE.config || {}), seasonData:fresh.seasonData || [] };
+  if (Array.isArray(fresh.miniGame?.roster)) STATE.miniGameRoster = fresh.miniGame.roster;
+}
+
+async function run(fn, okMsg) {
+  try { const r = await fn(); await refreshState(); toast(typeof okMsg === 'function' ? okMsg(r) : okMsg); return r; }
+  catch (e) { toast(e.message, 'err'); }
+}
+async function refreshState() {
+  const loadSeq = LOAD_SEQ, teamKey = CTX.teamKey, seasonKey = CTX.seasonKey;
+  const [snap, state] = await Promise.all([
+    fetch('/api/snapshot?' + contextQuery(), { cache: 'no-store' }).then(r => r.ok ? r.json() : SNAP).catch(() => SNAP),
+    api('getState'),
+  ]);
+  if (loadSeq !== LOAD_SEQ || CTX.teamKey !== teamKey || CTX.seasonKey !== seasonKey) return;
+  SNAP = snap; STATE = state;
+  preferFreshSeason();
+  CATALOG = STATE.catalog || CATALOG;
+  renderContext(); renderEvInfo(); renderGames(); renderGameChangerTeams(); fillConfig(); initSeason(); initMiniGameRoster(); renderStatus();
+}
+
+$('#unlockBtn').onclick = unlock;
+$('#secret').addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
+// Auto-unlock if a key is already stored on this device.
+if (adminKey()) unlock();
+</script>
+</body>
+</html>

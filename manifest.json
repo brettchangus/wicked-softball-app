@@ -1,0 +1,13 @@
+{
+  "name": "Team Tournament Hub",
+  "short_name": "Tournament Hub",
+  "description": "Team tournament schedules, scores, standings, brackets, and season archives",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0d0d0d",
+  "theme_color": "#C41230",
+  "icons": [
+    { "src": "assets/icon.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "assets/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}
