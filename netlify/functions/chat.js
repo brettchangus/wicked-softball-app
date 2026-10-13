@@ -13,6 +13,8 @@ import {
 } from './lib/snapshot.js';
 import { verifyArchiveBundle } from './lib/archive.js';
 import { withSeedingRules } from './lib/seeding.js';
+import { applyTeamDisplay, editedTeamLabels, registeredTeamLabels, withRecentResultNames } from './lib/opponents.js';
+import { loadTeamDisplay } from './lib/team-display.js';
 import { seasonIsComplete } from './lib/context.js';
 import { MY_ID } from './lib/tournament.js';
 
@@ -739,6 +741,41 @@ export default async function handler(req) {
     }
     if (!snap) return json({ error: "The schedule isn't loaded yet — check back once games are posted." }, 503);
     snap = withSeedingRules(snap, archivedEvent || event);
+    // Same opponent names the dashboard shows (an admin's name/coach edits) — in the games and in
+    // a roster's registered-team list, which has no ids for applyTeamDisplay to rewrite.
+    const display = await loadTeamDisplay(scope, snap, {
+      opponents:{ ...(archivedEvent?.config?.opponents || {}), ...(event?.config?.opponents || {}) },
+      links:{ ...(archivedEvent?.config?.gameChangerTeams || {}), ...(event?.config?.gameChangerTeams || {}) },
+      ownUrl:season.teamConfig?.gameChangerUrl,
+    });
+    snap = applyTeamDisplay(snap, display);
+    // Season-history games need the display edits from their own tournament, including edits
+    // saved after archival. Use frozen structures when available, just as the dashboard does.
+    const labelsByEvent = { [String(snap.meta?.eventId)]:editedTeamLabels(display) };
+    const historyEventIds = new Set((snap.wicked || snap.meta?.wicked)?.games?.map(game => String(game.eventId)) || []);
+    if (historyEventIds.size) await Promise.all(Object.entries(servedEvents).map(async ([key, item]) => {
+      const edits = { ...(item.config?.opponents || {}), ...(season.events?.[key]?.config?.opponents || {}) };
+      if (key === context.eventKey || !Object.values(edits).some(edit => edit?.name || edit?.coach)) return;
+      const eventScope = { teamKey:context.teamKey, seasonKey:context.seasonKey, eventKey:key };
+      let eventStructure = archive ? item.snapshot : await readStructure(item.providerRef, eventScope);
+      if (!eventStructure && !archive && item.snapshotPath) {
+        try {
+          const response = await fetch(new URL('/' + item.snapshotPath.replace(/^\/+/, ''), req.url),
+            { signal:AbortSignal.timeout(5000) });
+          if (response.ok) eventStructure = await response.json();
+        } catch {}
+      }
+      if (!eventStructure?.meta?.eventId || !historyEventIds.has(String(eventStructure.meta.eventId))) return;
+      const links = { ...(item.config?.gameChangerTeams || {}), ...(season.events?.[key]?.config?.gameChangerTeams || {}) };
+      labelsByEvent[String(eventStructure.meta.eventId)] = editedTeamLabels(await loadTeamDisplay(
+        eventScope, eventStructure, { opponents:edits, links }));
+    }));
+    const shownWicked = withRecentResultNames(snap.wicked || snap.meta?.wicked, labelsByEvent);
+    if (shownWicked) snap = { ...snap, wicked:shownWicked };
+    if (snap.meta?.ast?.teams?.length) {
+      snap = { ...snap, meta:{ ...snap.meta,
+        ast:{ ...snap.meta.ast, teams:registeredTeamLabels(snap.meta.ast.teams, display) } } };
+    }
     const servedFinalStats = servedSeason.finalStats || season.finalStats;
     if (seasonIsComplete(season) && servedFinalStats) {
       snap = {

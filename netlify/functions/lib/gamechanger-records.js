@@ -53,7 +53,9 @@ export function locationsForGameChangerLinks(links, saved) {
 }
 
 // Fetch only for an explicit admin action. Keep the last good record when a request fails.
-export async function refreshGameChangerRecords(scope, links, { teamIds = null, now = Date.now(), fetchImpl = fetch } = {}) {
+// A profile's city/state is captured when its link is set (`updateLocation`); a plain record
+// refresh keeps the saved location and only fills one in when none was captured yet.
+export async function refreshGameChangerRecords(scope, links, { teamIds = null, updateLocation = false, now = Date.now(), fetchImpl = fetch } = {}) {
   const saved = await readGameChangerRecords(scope);
   const validLinks = Object.fromEntries(Object.entries(links || {}).filter(([, url]) => gameChangerPublicId(url)));
   const records = Object.fromEntries(Object.entries(saved).filter(([teamId, row]) =>
@@ -63,15 +65,21 @@ export async function refreshGameChangerRecords(scope, links, { teamIds = null, 
   const updates = await Promise.all(selected.map(async ([teamId, url]) => {
     let profile = null;
     try { profile = await fetchGameChangerProfile(url, fetchImpl); } catch {}
+    const previous = records[teamId]?.record;
     return [teamId, { url, checkedAt:new Date(now).toISOString(),
       record:profile?.record || records[teamId]?.record || null,
-      location:profile?.location || records[teamId]?.location || null,
-      failed:!profile?.record }];
+      location:(updateLocation ? profile?.location || records[teamId]?.location
+        : records[teamId]?.location || profile?.location) || null,
+      failed:!profile?.record,
+      changed:!!profile?.record && (previous?.win !== profile.record.win
+        || previous?.loss !== profile.record.loss || previous?.tie !== profile.record.tie) }];
   }));
   updates.forEach(([teamId, row]) => { records[teamId] = row; });
   if (updates.length || Object.keys(saved).length !== Object.keys(records).length)
     await writeGameChangerRecords(scope, records);
   return { records:recordsForGameChangerLinks(validLinks, records),
+    checked:updates.filter(([, row]) => !row.failed).length,
+    changed:updates.filter(([, row]) => row.changed).length,
     updated:updates.filter(([, row]) => !row.failed).length,
     failed:updates.filter(([, row]) => row.failed).length };
 }

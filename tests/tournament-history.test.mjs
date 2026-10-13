@@ -40,13 +40,51 @@ test('past tournaments in active seasons load their saved scoped results before 
   assert.equal(calls.length, 2, 'cached results belong to one team and season');
 });
 
-test('completed seasons prefer the frozen archive without requesting live data', async () => {
+test('completed-season overlays prefer scoped snapshots with opponent edits applied', async () => {
+  const edited = { ...snapshot, pools:{ A:{ teams:[{ id:'opp', name:'Edited Example Club' }] } },
+    config:{ teamDisplay:{ opp:{ name:'Edited Example Club', providerName:'Provider Example Club' } } } };
+  const calls = [];
   const { load } = setup({
     SEASON_ARCHIVE_EVENTS:{ past:{ eventKey:'past-key', archived:true } },
-    loadSeasonArchiveBundle:async () => ({ events:{ 'past-key':{ snapshot } } }),
-    fetch:async () => { throw new Error('must not fetch'); },
+    loadSeasonArchiveBundle:async () => { throw new Error('archive fallback should not run'); },
+    fetch:async url => { calls.push(url); return { ok:true, json:async () => edited }; },
+  });
+  assert.equal(await load('past'), edited);
+  assert.deepEqual(calls, ['/api/snapshot?team=our-team&season=fall-2026&eventKey=past-key']);
+  assert.equal(await load('past'), edited);
+  assert.equal(calls.length, 1, 'the edited snapshot is cached');
+});
+
+test('completed-season overlays fall back to the archive when scoped snapshots are unavailable', async () => {
+  for (const response of [null, { ok:false }, { ok:true, json:async () => ({ meta:{ schedulePending:true } }) },
+    { ok:true, json:async () => ({ comingSoon:true }) }]) {
+    const calls = [];
+    const { load } = setup({
+      SEASON_ARCHIVE_EVENTS:{ past:{ eventKey:'past-key', archived:true } },
+      loadSeasonArchiveBundle:async () => { calls.push('archive'); return { events:{ 'past-key':{ snapshot } } }; },
+      fetch:async url => {
+        calls.push(url);
+        if (!response) throw new Error('offline');
+        return response;
+      },
+    });
+    assert.equal(await load('past'), snapshot);
+    assert.deepEqual(calls, ['/api/snapshot?team=our-team&season=fall-2026&eventKey=past-key', 'archive']);
+  }
+});
+
+test('completed-season overlays use static snapshots when both scoped data and the archive are missing', async () => {
+  const calls = [];
+  const { load } = setup({
+    SEASON_ARCHIVE_EVENTS:{ past:{ eventKey:'past-key', archived:true } },
+    loadSeasonArchiveBundle:async () => { calls.push('archive'); return null; },
+    fetch:async url => {
+      calls.push(url);
+      return url === 'data/past.json' ? { ok:true, json:async () => snapshot } : { ok:false };
+    },
   });
   assert.equal(await load('past'), snapshot);
+  assert.deepEqual(calls, ['/api/snapshot?team=our-team&season=fall-2026&eventKey=past-key', 'archive', 'data/past.json']);
 });
 
 test('unavailable or pending saved snapshots fall back to a committed tournament snapshot', async () => {

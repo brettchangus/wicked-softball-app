@@ -64,7 +64,7 @@ test('Next Game leaves GameChanger links in the record column',()=>{
 
 test('coach and GameChanger location share one escaped secondary line',()=>{
   const render=client('gameChangerLocationHtml',{
-    GAMECHANGER_LOCATIONS:{ ours:{ city:'Example <City>', state:'XX' } },
+    GAMECHANGER_LOCATIONS:{ ours:{ city:'Example <City>', state:'XX' } }, TEAM_DISPLAY:{},
     splitRosterName:client('splitRosterName'), MY_ID:'ours', AST_TEAM_NAME:'Example Team-Coach',
     historyEsc:value=>String(value).replaceAll('<','&lt;').replaceAll('>','&gt;')
   });

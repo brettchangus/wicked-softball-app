@@ -79,52 +79,39 @@
   .mg-table input[type=checkbox] { width:auto; }
   .mg-table td.mg-check { text-align:center; }
   .note.section-title { margin:0 0 4px; text-transform:uppercase; letter-spacing:.05em; }
-  .gc-toolbar { display:flex; gap:10px; align-items:end; flex-wrap:wrap; margin:0 0 12px; }
-  .gc-toolbar > div { flex:1 1 250px; min-width:0; }
-  .gc-toolbar label { margin:0 0 5px; }
-  .gc-token-help { margin:0 0 12px; font-size:12px; color:var(--mut); }
+  /* Opponents card, its editor and the GameChanger token prompt */
+  .opp-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0 0 12px; }
+  .opp-toolbar .note { flex:1 1 160px; margin:0; }
+  .opp-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .opp-table th { color:var(--mut); text-align:left; font-size:12px; font-weight:600; padding:8px; border-bottom:1px solid var(--line); }
+  .opp-table td { padding:11px 8px; border-bottom:1px solid var(--line); vertical-align:middle; }
+  .opp-table tbody tr:last-child td { border-bottom:0; }
+  .opp-table .opp-actions { text-align:right; white-space:nowrap; }
+  .opp-table .opp-actions button { padding:7px 10px; }
+  .opp-linked { color:#7dd3fc; font-weight:600; overflow-wrap:anywhere; }
+  .opp-meta { color:var(--mut); font-size:12px; margin-top:3px; font-variant-numeric:tabular-nums; }
+  .opp-none { color:var(--mut); }
+  .opp-editor-bg { z-index:90; align-items:flex-start; overflow:auto; }
+  .opp-editor-bg .modal { max-width:500px; margin:24px auto; }
+  .gc-token-bg { z-index:95; }
+  #gcToken { -webkit-text-security:disc; }
+  #gcTokenError { color:var(--danger); }
+  .gc-token-help { margin:10px 0 16px; font-size:12px; color:var(--mut); }
   .gc-token-help summary { cursor:pointer; }
   .gc-token-help a { color:#7dd3fc; }
-  .gc-refresh-row { margin:0 0 12px; }
-  .gc-table { width:100%; border-collapse:collapse; font-size:13px; }
-  .gc-table th { color:var(--mut); text-align:left; font-size:12px; font-weight:600; padding:8px; border-bottom:1px solid var(--line); }
-  .gc-table td { padding:11px 8px; border-bottom:1px solid var(--line); vertical-align:middle; }
-  .gc-table tbody:last-child tr:last-child td { border-bottom:0; }
-  .gc-table .gc-actions { text-align:right; white-space:nowrap; }
-  .gc-table .gc-actions button { padding:7px 10px; margin-left:4px; }
-  .gc-table .gc-linked { color:#7dd3fc; font-weight:600; overflow-wrap:anywhere; }
-  .gc-table .gc-record { color:var(--txt); font-size:12px; margin-top:4px; font-variant-numeric:tabular-nums; }
-  .gc-table .gc-record.missing { color:var(--mut); }
-  .gc-table .gc-status { color:var(--mut); white-space:nowrap; }
-  .gc-table .gc-meta { color:var(--mut); font-size:12px; margin-top:3px; }
-  .gc-table .gc-detail > td { padding:8px 8px 14px; background:#172236; }
-  .gc-editor { display:grid; grid-template-columns:minmax(140px,1fr) minmax(200px,1.5fr) auto auto; gap:8px; align-items:end; }
-  .gc-editor label { min-width:0; margin:0; }
-  .gc-editor label span { display:block; margin:0 0 5px; }
-  .gc-results { display:grid; gap:8px; }
-  .gc-results[hidden], .gc-editor[hidden], .gc-detail[hidden] { display:none; }
+  .gc-meta { color:var(--mut); font-size:12px; margin-top:3px; }
+  .gc-results { display:grid; gap:8px; margin-top:10px; padding:4px 12px; border:1px solid var(--line); border-radius:10px; background:#0b1220; font-size:13px; }
   .gc-result { display:flex; gap:10px; align-items:center; flex-wrap:wrap; padding:6px 0; border-bottom:1px solid var(--line); }
   .gc-result:last-child { border-bottom:0; }
   .gc-result-info { flex:1 1 220px; }
   .gc-result-info a { color:#7dd3fc; }
-  @media (max-width:620px) {
-    .gc-table .gc-status-col, .gc-table .gc-status { display:none; }
-    .gc-table th, .gc-table td { padding:9px 4px; }
-    .gc-table .gc-actions { white-space:normal; min-width:104px; }
-    .gc-table .gc-actions button { margin:2px; }
-    .gc-editor { grid-template-columns:1fr; }
-  }
-  @media (max-width:480px) {
-    .gc-table, .gc-table tbody, .gc-table tr, .gc-table td { display:block; width:100%; }
-    .gc-table thead { display:none; }
-    .gc-table tbody { padding:8px 0; border-bottom:1px solid var(--line); }
-    .gc-table tbody:last-child { border-bottom:0; }
-    .gc-table tbody > tr:first-child { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 8px; }
-    .gc-table tbody > tr:first-child td { border:0; padding:2px 0; }
-    .gc-table tbody > tr:first-child td:first-child { grid-column:1 / -1; }
-    .gc-table tbody > tr:first-child td:nth-child(2) { grid-column:1; }
-    .gc-table tbody > tr:first-child td:last-child { grid-column:2; grid-row:2; min-width:0; }
-    .gc-table .gc-detail > td { padding:10px 0; }
+  @media (max-width:520px) {
+    .opp-table thead { display:none; }
+    .opp-table, .opp-table tbody { display:block; }
+    .opp-table tr { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:3px 8px; padding:10px 0; border-bottom:1px solid var(--line); }
+    .opp-table tbody tr:last-child { border-bottom:0; }
+    .opp-table td { display:block; border:0; padding:0; grid-column:1; }
+    .opp-table td.opp-actions { grid-column:2; grid-row:1 / span 3; align-self:center; }
   }
   details.collapsible > summary { list-style:none; cursor:pointer; margin:0; display:flex; align-items:center; gap:8px; }
   details.collapsible > summary::-webkit-details-marker { display:none; }
@@ -271,15 +258,13 @@
     </div>
 
     <div class="card">
-      <h2>Opponent GameChanger links</h2>
-      <div class="gc-toolbar"><div><label for="gcToken">GameChanger token (kept only in this open page)</label>
-        <input id="gcToken" type="password" autocomplete="off" spellcheck="false" placeholder="Paste token, or use configured token"></div>
-        <button id="gcFindAll">Search all</button></div>
-      <details class="gc-token-help"><summary>Get a token without DevTools</summary>
-        <p>Drag <a id="gcTokenBookmarklet" draggable="true">Copy GC token</a> to your browser's bookmarks bar once. In a signed-in GameChanger tab, click that bookmark and search for any team. Then paste the copied token above.</p>
-      </details>
-      <div class="gc-refresh-row"><button class="sec" id="gcRefreshRecords">Refresh records</button></div>
-      <div id="gcTeams"></div>
+      <h2>Opponents</h2>
+      <div class="opp-toolbar">
+        <span class="note" id="oppSummary"></span>
+        <button id="gcAutoDetect">Auto-Detect GameChanger Links</button>
+        <button class="sec" id="gcRefreshRecords">Refresh GameChanger Records</button>
+      </div>
+      <div id="oppTeams"></div>
     </div>
 
     <!-- HOMERUN DERBY (per team + season) -->
@@ -454,6 +439,51 @@
   </div>
 </div>
 
+<!-- OPPONENT EDITOR MODAL -->
+<div class="modal-bg opp-editor-bg" id="oppModalBg" role="dialog" aria-modal="true" aria-labelledby="oppModalTitle">
+  <div class="modal">
+    <h3 id="oppModalTitle">Edit opponent</h3>
+    <p class="note" id="oppProvider"></p>
+    <label for="oppName">Team name</label><input id="oppName" autocomplete="off">
+    <label for="oppCoach">Coach</label><input id="oppCoach" autocomplete="off">
+    <div class="row">
+      <div class="grow"><label for="oppCity">City</label><input id="oppCity" autocomplete="off"></div>
+      <div><label for="oppState">State</label><input id="oppState" style="width:84px" maxlength="2" autocomplete="off" autocapitalize="characters"></div>
+    </div>
+    <label for="oppGcUrl">GameChanger link</label>
+    <div class="row">
+      <input class="grow" id="oppGcUrl" type="url" autocomplete="off" placeholder="https://web.gc.com/teams/…">
+      <button class="sec" id="oppFind">Find on GameChanger</button>
+    </div>
+    <p class="note hide" id="oppGcNote"></p>
+    <div class="gc-results hide" id="oppResults"></div>
+    <p class="note">A blank field falls back to the provider's value, shown as its placeholder.</p>
+    <div class="row" style="margin-top:16px;justify-content:flex-end">
+      <button class="ghost" id="oppReset" style="margin-right:auto">Reset to provider</button>
+      <button class="ghost" id="oppCancel">Cancel</button>
+      <button id="oppSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- GAMECHANGER TOKEN PROMPT -->
+<div class="modal-bg gc-token-bg" id="gcTokenBg" role="dialog" aria-modal="true" aria-labelledby="gcTokenTitle">
+  <div class="modal">
+    <h3 id="gcTokenTitle">Auto-detect GameChanger links</h3>
+    <p class="note" id="gcTokenMsg"></p>
+    <label for="gcToken">GameChanger token (kept only in this open page)</label>
+    <input id="gcToken" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a fresh search token">
+    <p class="note hide" id="gcTokenError" role="alert"></p>
+    <details class="gc-token-help"><summary>Get a token without DevTools</summary>
+      <p>Drag <a id="gcTokenBookmarklet" draggable="true">Copy GC token</a> to your browser's bookmarks bar once. In a signed-in GameChanger tab, click that bookmark and search for any team. Then paste the copied token above.</p>
+    </details>
+    <div class="acts">
+      <button class="ghost" id="gcTokenCancel">Cancel</button>
+      <button id="gcTokenSearch">Search</button>
+    </div>
+  </div>
+</div>
+
 <!-- CONFIRM MODAL -->
 <div class="modal-bg" id="modalBg">
   <div class="modal">
@@ -470,6 +500,9 @@
 
 <script>
 const $ = s => document.querySelector(s);
+// Keep password managers from filling this short-lived search token as the admin password.
+if (!CSS.supports('-webkit-text-security', 'disc')) $('#gcToken').type = 'password';
+$('#gcToken').value = '';
 const KEYK = 'wickedAdminKey';
 const CTXK = 'teamHubAdminContext';
 let SNAP = null, STATE = null, CATALOG = null, SEASON = [], GAMES = [];
@@ -517,8 +550,10 @@ function confirmAction(title, msg, okLabel = 'Confirm', danger = false) {
 
 // ---------- unlock ----------
 function lock() { $('#app').classList.add('hide'); $('#unlockCard').classList.remove('hide'); }
-async function unlock() {
-  localStorage.setItem(KEYK, $('#secret').value.trim());
+// `secret` is what the admin just typed. The auto-unlock on load passes none and uses the secret
+// already stored — the field is empty then, so saving it would wipe the stored one.
+async function unlock(secret) {
+  if (typeof secret === 'string') localStorage.setItem(KEYK, secret.trim());
   try {
     await loadAll();
     $('#unlockCard').classList.add('hide'); $('#app').classList.remove('hide');
@@ -529,6 +564,7 @@ async function unlock() {
 // ---------- load ----------
 async function loadAll() {
   const loadSeq = ++LOAD_SEQ;
+  closeOpponentEditor();
   let catalogResult;
   try { catalogResult = await api('getCatalog'); }
   catch (e) {
@@ -567,7 +603,7 @@ async function loadAll() {
     $('#evInfo').innerHTML = `${esc(STATE.team?.name || CTX.teamKey)}<br><span class="note">No season yet — add one to set up its schedule.</span>`;
     return;
   }
-  renderEvInfo(); buildGames(); renderGameChangerTeams(); fillConfig(); initSeason(); initMiniGameRoster(); renderStatus();
+  renderEvInfo(); buildGames(); renderOpponents(); fillConfig(); initSeason(); initMiniGameRoster(); renderStatus();
 }
 // Prefill the team editor from the full team record (STATE.team carries norcalTeamId, which the
 // public catalog omits).
@@ -824,9 +860,6 @@ $('#games')?.addEventListener('click', async e => {
 });
 $('#gameFilter')?.addEventListener('input', renderGames);
 
-function gameChangerTeams() {
-  return (STATE?.gameChangerOpponents || []).map(t => [t.teamId, t.name, t.possibleOpponent]);
-}
 // Self-contained so the link can be dragged to the bookmarks bar and run on web.gc.com.
 function gameChangerTokenBookmarklet() {
   if (location.hostname !== 'web.gc.com') {
@@ -883,98 +916,253 @@ $('#gcTokenBookmarklet').addEventListener('click', event => {
   event.preventDefault();
   toast('Drag Copy GC token to your bookmarks bar, then click it on web.gc.com.');
 });
-function renderGameChangerTeams() {
-  const links = cfg().gameChangerTeams || {};
+// ---------- opponents ----------
+const OPP_FIELDS = ['name', 'coach', 'city', 'state'];
+const OPP_LABELS = { name:'Team name', coach:'Coach', city:'City', state:'State' };
+let GC_TOKEN = '';                                  // page memory only — gone on reload
+let GC_REVIEW = { context:'', rows:new Map() };     // teams auto-detect could not link: id → { candidates, error }
+let OPP_EDIT = null;                                // { row, link, picked } while the editor is open
+window.addEventListener('pageshow', () => { GC_TOKEN = ''; $('#gcToken').value = ''; });
+
+function opponents() { return STATE?.opponents || []; }
+function gcLinks() { return cfg().gameChangerTeams || {}; }
+function gcPublicId(url) {
+  return /^https:\/\/web\.gc\.com\/teams\/([A-Za-z0-9_-]+)/i.exec(String(url || '').trim())?.[1] || '';
+}
+function gcReview(teamId) { return GC_REVIEW.context === contextQuery() ? GC_REVIEW.rows.get(teamId) : null; }
+function gcReviewText(review) {
+  if (review.error) return review.error;
+  const count = review.candidates.length;
+  return count ? `${count} possible match${count === 1 ? '' : 'es'}` : 'No match found';
+}
+function renderOpponents() {
+  const links = gcLinks();
   const names = cfg().gameChangerTeamNames || {};
   const records = SNAP?.config?.gameChangerRecords || {};
-  const teams = gameChangerTeams();
-  $('#gcTeams').innerHTML = teams.length ? `<table class="gc-table"><thead><tr><th>Opponent</th><th>GameChanger team</th><th class="gc-status-col">Status</th><th class="gc-actions">Actions</th></tr></thead>${teams.map(([id, name, possibleOpponent]) => {
-    const url = links[id] || '';
-    const gcName = names[id] || '';
-    const record = records[id];
+  const rows = opponents();
+  const linked = rows.filter(row => links[row.teamId]).length;
+  $('#oppSummary').textContent = rows.length
+    ? `${rows.length} team${rows.length === 1 ? '' : 's'} · ${linked} linked to GameChanger` : '';
+  $('#oppTeams').innerHTML = rows.length ? `<table class="opp-table"><thead><tr><th>Team</th><th>Location</th><th>GameChanger</th><th class="opp-actions"></th></tr></thead><tbody>${rows.map(row => {
+    const url = links[row.teamId] || '';
+    const record = records[row.teamId];
     const recordText = record ? `${record.win}–${record.loss}${record.tie ? `–${record.tie}` : ''}` : '—';
-    return `<tbody data-team-id="${esc(id)}"><tr>
-      <td><strong>${esc(name)}</strong>${possibleOpponent ? '<div class="gc-meta">Matchup unconfirmed</div>' : ''}</td>
-      <td>${url ? `<a class="gc-linked" href="${esc(url)}" target="blank">${esc(gcName || 'Open team')} ↗</a><div class="gc-record${record ? '' : ' missing'}">Record: ${esc(recordText)}</div>` : '<span class="gc-meta">No team selected</span>'}</td>
-      <td class="gc-status">${url ? 'Linked' : 'Needs review'}</td>
-      <td class="gc-actions"><button class="gcSearch">Search</button><button class="ghost gcEdit">Edit</button>${url ? `<button class="ghost gcClear" aria-label="Remove link for ${esc(name)}">Remove</button>` : ''}</td></tr>
-      <tr class="gc-detail" hidden><td colspan="4"><div class="gc-results" hidden></div>
-        <div class="gc-editor" hidden><label><span>GameChanger team name</span><input class="gcName" value="${esc(gcName)}" placeholder="Team name"></label>
-        <label><span>GameChanger team URL</span><input class="gcUrl" type="url" value="${esc(url)}" placeholder="https://web.gc.com/teams/…"></label>
-        <button class="gcSave">Save</button><button class="ghost gcCancel">Cancel</button></div></td></tr></tbody>`;
-  }).join('')}</table>` : `<p class="note">${SNAP?.meta?.schedulePending ? 'No registered teams are available for this tournament yet.' : 'No opponents in the current tournament snapshot.'}</p>`;
+    const location = [row.city, row.state].filter(Boolean).join(', ');
+    const review = gcReview(row.teamId);
+    const gameChanger = url
+      ? `<a class="opp-linked" href="${esc(url)}" target="blank" rel="noopener">${esc(names[row.teamId] || 'Open team')} ↗</a><div class="opp-meta">Record: ${esc(recordText)}</div>`
+      : `<span class="badge">Not linked</span>${review ? `<div class="opp-meta">${esc(gcReviewText(review))}</div>` : ''}`;
+    return `<tr data-team-id="${esc(row.teamId)}">
+      <td><strong>${esc(row.name)}</strong><div class="opp-meta">${row.coach ? `Coach ${esc(row.coach)}` : 'No coach'}</div></td>
+      <td>${location ? esc(location) : '<span class="opp-none">No location</span>'}</td>
+      <td>${gameChanger}</td>
+      <td class="opp-actions"><button class="ghost oppEdit" aria-label="Edit ${esc(row.name)}">Edit</button></td></tr>`;
+  }).join('')}</tbody></table>` : `<p class="note">${SNAP?.meta?.schedulePending ? 'No registered teams are available for this tournament yet.' : 'No opponents in the current tournament snapshot.'}</p>`;
 }
 function gameChangerResultsHtml(candidates) {
   return candidates.length ? candidates.map(candidate => {
     const matches = [candidate.cityMatch && 'city', candidate.coachMatch && 'coach', candidate.ageMatch && 'age'].filter(Boolean);
-    return `<div class="gc-result"><div class="gc-result-info"><a href="${esc(candidate.url)}" target="blank"><strong>${esc(candidate.name)}</strong> ↗</a><div class="gc-meta">${esc([candidate.city, candidate.state].filter(Boolean).join(', '))} · ${esc(candidate.season)} ${esc(candidate.year || '')}${matches.length ? ` · Matches: ${matches.join(', ')}` : ''}${candidate.autoMatch ? ' · Strong match' : ''}</div></div><button class="gcChoose" data-url="${esc(candidate.url)}" data-name="${esc(candidate.name)}">Use</button></div>`;
+    return `<div class="gc-result"><div class="gc-result-info"><a href="${esc(candidate.url)}" target="blank" rel="noopener"><strong>${esc(candidate.name)}</strong> ↗</a><div class="gc-meta">${esc([candidate.city, candidate.state].filter(Boolean).join(', '))} · ${esc(candidate.season)} ${esc(candidate.year || '')}${matches.length ? ` · Matches: ${matches.join(', ')}` : ''}${candidate.autoMatch ? ' · Strong match' : ''}</div></div><button class="gcChoose" data-url="${esc(candidate.url)}" data-name="${esc(candidate.name)}">Use</button></div>`;
   }).join('') : '<p class="note">No GameChanger teams found.</p>';
 }
-$('#gcFindAll')?.addEventListener('click', async () => {
-  if (!await confirmAction('Search all opponents', 'Search GameChanger and save teams with one clear match based on name, age, city, and coach?')) return;
-  try {
-    const result = await api('autoFindGameChangerTeams', { gcToken:$('#gcToken').value.trim() });
-    const failed = result.failed?.length || 0;
-    toast(`Linked ${result.matched.length} team${result.matched.length === 1 ? '' : 's'}; ${failed ? `${failed} searches failed; ` : ''}${result.unresolved.length - failed} need review.`);
-    await refreshState();
-    const cards = new Map([...$('#gcTeams').querySelectorAll('tbody[data-team-id]')].map(card => [card.dataset.teamId, card]));
-    result.unresolved.forEach(row => {
-      const card = cards.get(row.teamId);
-      const results = card?.querySelector('.gc-results');
-      if (results) {
-        card.querySelector('.gc-detail').hidden = false;
-        card.querySelector('.gc-editor').hidden = true;
-        results.hidden = false;
-        if (row.error) results.textContent = row.error;
-        else results.innerHTML = gameChangerResultsHtml(row.candidates);
+
+// Asks for the GameChanger token, then runs `work(token)` when Search is clicked. The dialog
+// stays open while it runs so a rejected or expired token is reported in place and can be
+// replaced. Resolves { result } on success, or null when cancelled. The token is remembered in
+// page memory, so later searches in this page session are prefilled or skip the prompt.
+function promptGameChangerToken({ title, message, error = '', work }) {
+  return new Promise(resolve => {
+    const bg = $('#gcTokenBg'), input = $('#gcToken'), note = $('#gcTokenError');
+    const search = $('#gcTokenSearch'), cancel = $('#gcTokenCancel');
+    const showError = text => { note.textContent = text; note.classList.toggle('hide', !text); };
+    const busy = on => { search.disabled = cancel.disabled = on; search.textContent = on ? 'Searching…' : 'Search'; };
+    const close = value => {
+      bg.classList.remove('show');
+      search.onclick = cancel.onclick = input.onkeydown = input.oninput = null;
+      busy(false);
+      resolve(value);
+    };
+    $('#gcTokenTitle').textContent = title;
+    $('#gcTokenMsg').textContent = message;
+    input.value = GC_TOKEN;
+    showError(error);
+    search.onclick = async () => {
+      const token = input.value.trim();
+      if (!token) return showError('Paste a GameChanger token first.');
+      GC_TOKEN = token;
+      showError('');
+      busy(true);
+      try { close({ result:await work(token) }); }
+      catch (e) {
+        busy(false);
+        if (e.code === 'gameChangerToken') { GC_TOKEN = ''; input.value = ''; input.focus(); }
+        showError(e.message);
       }
-    });
-  } catch (error) { toast(error.message, 'err'); }
+    };
+    cancel.onclick = () => close(null);
+    input.oninput = () => showError('');
+    input.onkeydown = e => { if (e.key === 'Enter') search.click(); };
+    bg.classList.add('show');
+    input.focus();
+  });
+}
+
+$('#gcAutoDetect')?.addEventListener('click', async () => {
+  const unlinked = opponents().filter(row => !gcLinks()[row.teamId]).length;
+  const requestedContext = contextQuery();
+  const done = await promptGameChangerToken({
+    title:'Auto-detect GameChanger links',
+    message:unlinked
+      ? `Searches GameChanger for the ${unlinked} team${unlinked === 1 ? '' : 's'} without a link and saves each one that has a single clear match on name, age, city, and coach.`
+      : 'Every team already has a GameChanger link, so a search will find nothing new.',
+    work:token => api('autoFindGameChangerTeams', { gcToken:token }),
+  });
+  if (!done) return;
+  const result = done.result;
+  const failed = result.failed?.length || 0;
+  if (requestedContext === contextQuery()) {
+    GC_REVIEW = { context:requestedContext, rows:new Map(result.unresolved.map(row =>
+      [row.teamId, { candidates:row.candidates || [], error:row.error || '' }])) };
+  }
+  try { await refreshState(); } catch (error) { toast(error.message, 'err'); return; }
+  toast(`Linked ${result.matched.length} team${result.matched.length === 1 ? '' : 's'}; ${failed ? `${failed} searches failed; ` : ''}${result.unresolved.length - failed} need review.`);
 });
 $('#gcRefreshRecords')?.addEventListener('click', async () => {
   if (!await confirmAction('Refresh GameChanger records', 'Pull current GameChanger records for all linked teams?')) return;
-  await run(() => api('refreshGameChangerRecords'), result => {
-    if (!result.updated && !result.failed) return 'No linked GameChanger teams to refresh.';
-    return `Updated ${result.updated} GameChanger record${result.updated === 1 ? '' : 's'}`
+  const requestedContext = contextQuery();
+  const result = await run(() => api('refreshGameChangerRecords'), result => {
+    if (!result.checked && !result.failed) return 'No linked GameChanger teams to refresh.';
+    return `Checked ${result.checked} GameChanger record${result.checked === 1 ? '' : 's'}; ${result.changed} changed`
       + (result.failed ? `; ${result.failed} unavailable` : '') + '.';
   });
-});
-$('#gcTeams')?.addEventListener('click', async e => {
-  const card = e.target.closest('tbody[data-team-id]'); if (!card) return;
-  const teamId = card.dataset.teamId;
-  const name = gameChangerTeams().find(([id]) => id === teamId)?.[1] || teamId;
-  const detail = card.querySelector('.gc-detail');
-  const results = card.querySelector('.gc-results');
-  const editor = card.querySelector('.gc-editor');
-  if (e.target.classList.contains('gcSearch')) {
-    detail.hidden = false; editor.hidden = true; results.hidden = false;
-    results.textContent = 'Searching GameChanger…';
-    try {
-      const found = await api('searchGameChangerTeam', { teamId, gcToken:$('#gcToken').value.trim() });
-      results.innerHTML = gameChangerResultsHtml(found.candidates);
-    } catch (error) { results.textContent = error.message; }
-  } else if (e.target.classList.contains('gcEdit')) {
-    detail.hidden = false; results.hidden = true; editor.hidden = false;
-    editor.querySelector('.gcName').focus();
-  } else if (e.target.classList.contains('gcCancel')) {
-    detail.hidden = true;
-  } else if (e.target.classList.contains('gcChoose')) {
-    const url = e.target.dataset.url;
-    const gcName = e.target.dataset.name;
-    if (!await confirmAction('Save GameChanger link', `Link ${name} to ${url}?`)) return;
-    await run(() => api('setGameChangerTeamLink', { teamId, url, name:gcName }), 'GameChanger link saved');
-  } else if (e.target.classList.contains('gcSave')) {
-    const url = editor.querySelector('.gcUrl').value.trim();
-    const gcName = editor.querySelector('.gcName').value.trim();
-    if (!gcName) return toast('Enter the GameChanger team name', 'err');
-    if (!url) return toast('Enter a GameChanger team link', 'err');
-    if (!await confirmAction('Save GameChanger link', `Link ${name} to ${gcName} (${url})?`)) return;
-    await run(() => api('setGameChangerTeamLink', { teamId, url, name:gcName }), 'GameChanger link saved');
-  } else if (e.target.classList.contains('gcClear')) {
-    if (!await confirmAction('Clear GameChanger link', `Remove the GameChanger link for ${name}?`)) return;
-    await run(() => api('clearGameChangerTeamLink', { teamId }), 'GameChanger link cleared');
+  if (result && requestedContext === contextQuery() && SNAP) {
+    SNAP.config = { ...(SNAP.config || {}), gameChangerRecords:result.records };
+    renderOpponents();
   }
 });
+
+// The editor is prefilled with each field's current value. Saving sends only what differs from
+// the provider's value as an override — a field left equal to (or blanked back to) the provider's
+// value is stored as no override, so it keeps following the provider.
+function opponentFieldOverrides() {
+  const { row } = OPP_EDIT;
+  return Object.fromEntries(OPP_FIELDS.map(key => {
+    let value = $('#opp' + key[0].toUpperCase() + key.slice(1)).value.replace(/\s+/g, ' ').trim();
+    if (key === 'state') value = value.toUpperCase();
+    return [key, value && value !== (row.defaults[key] || '') ? value : ''];
+  }));
+}
+function renderOpponentGcNote() {
+  const { link, picked } = OPP_EDIT;
+  const url = $('#oppGcUrl').value.trim();
+  const name = picked?.url === url ? picked.name : url && url === link ? (cfg().gameChangerTeamNames || {})[OPP_EDIT.row.teamId] : '';
+  $('#oppGcNote').textContent = name ? `GameChanger team: ${name}` : '';
+  $('#oppGcNote').classList.toggle('hide', !name);
+}
+function showOpponentResults(html, isText = false) {
+  const results = $('#oppResults');
+  results.classList.remove('hide');
+  if (isText) results.textContent = html; else results.innerHTML = html;
+}
+function openOpponentEditor(teamId) {
+  const row = opponents().find(item => item.teamId === teamId);
+  if (!row) return;
+  const link = gcLinks()[teamId] || '';
+  OPP_EDIT = { row, link, picked:null };
+  $('#oppModalTitle').textContent = `Edit ${row.name}`;
+  $('#oppProvider').textContent = `Provider name: ${row.providerName}`;
+  const hints = { name:row.providerName, coach:'No coach', city:'No city', state:'ST' };
+  OPP_FIELDS.forEach(key => {
+    const input = $('#opp' + key[0].toUpperCase() + key.slice(1));
+    input.value = row[key] || '';
+    input.placeholder = row.defaults[key] || hints[key];
+  });
+  $('#oppGcUrl').value = link;
+  renderOpponentGcNote();
+  $('#oppResults').classList.add('hide');
+  const review = gcReview(teamId);
+  if (!link && review) {
+    if (review.error) showOpponentResults(review.error, true);
+    else showOpponentResults(gameChangerResultsHtml(review.candidates));
+  }
+  $('#oppModalBg').classList.add('show');
+  $('#oppName').focus();
+}
+function closeOpponentEditor() {
+  OPP_EDIT = null;
+  $('#oppModalBg').classList.remove('show');
+}
+$('#oppTeams')?.addEventListener('click', e => {
+  const button = e.target.closest('.oppEdit');
+  if (button) openOpponentEditor(button.closest('tr').dataset.teamId);
+});
+$('#oppCancel').onclick = closeOpponentEditor;
+$('#oppGcUrl').addEventListener('input', () => { if (OPP_EDIT) renderOpponentGcNote(); });
+$('#oppReset').onclick = () => {
+  if (!OPP_EDIT) return;
+  OPP_FIELDS.forEach(key => { $('#opp' + key[0].toUpperCase() + key.slice(1)).value = OPP_EDIT.row.defaults[key] || ''; });
+};
+$('#oppFind').onclick = async () => {
+  if (!OPP_EDIT) return;
+  const { row } = OPP_EDIT;
+  const stillOpen = () => OPP_EDIT?.row.teamId === row.teamId;
+  const search = token => api('searchGameChangerTeam', { teamId:row.teamId, gcToken:token, draft:opponentFieldOverrides() });
+  let tokenError = '';
+  if (GC_TOKEN) {
+    showOpponentResults('Searching GameChanger…', true);
+    try {
+      const found = await search(GC_TOKEN);
+      if (stillOpen()) showOpponentResults(gameChangerResultsHtml(found.candidates));
+      return;
+    } catch (error) {
+      if (error.code !== 'gameChangerToken') { if (stillOpen()) showOpponentResults(error.message, true); return; }
+      GC_TOKEN = '';
+      tokenError = error.message;
+      if (stillOpen()) $('#oppResults').classList.add('hide');
+    }
+  }
+  const done = await promptGameChangerToken({
+    title:'GameChanger token', message:`Needed to search GameChanger for ${row.name}.`, error:tokenError, work:search });
+  if (done && stillOpen()) showOpponentResults(gameChangerResultsHtml(done.result.candidates));
+};
+$('#oppResults').addEventListener('click', e => {
+  const choice = e.target.closest('.gcChoose');
+  if (!choice || !OPP_EDIT) return;
+  OPP_EDIT.picked = { url:choice.dataset.url, name:choice.dataset.name };
+  $('#oppGcUrl').value = choice.dataset.url;
+  renderOpponentGcNote();
+  $('#oppResults').classList.add('hide');
+});
+$('#oppSave').onclick = async () => {
+  if (!OPP_EDIT) return;
+  const { row, link, picked } = OPP_EDIT;
+  const state = $('#oppState').value.trim();
+  if (state && !/^[A-Za-z]{2}$/.test(state)) return toast('Use a two-letter state, like CA', 'err');
+  const next = opponentFieldOverrides();
+  const fields = {}, changes = [];
+  for (const key of OPP_FIELDS) {
+    if (next[key] === (row.override[key] || '')) continue;
+    fields[key] = next[key];
+    changes.push(`${OPP_LABELS[key]}: ${next[key] || `${row.defaults[key] || 'none'} (provider's value)`}`);
+  }
+  const url = $('#oppGcUrl').value.trim();
+  if (url !== link) {
+    if (url && !gcPublicId(url)) return toast('Use a https://web.gc.com/teams/… profile link', 'err');
+    const pickedName = picked?.url === url ? picked.name : '';
+    fields.gcUrl = url;
+    if (url) fields.gcName = pickedName;
+    changes.push(url ? `GameChanger link: ${pickedName || url}` : 'GameChanger link: removed');
+  }
+  if (!changes.length) { closeOpponentEditor(); return toast('No changes to save'); }
+  const sameLink = fields.gcUrl && opponents().find(other =>
+    other.teamId !== row.teamId && gcPublicId(gcLinks()[other.teamId]) === gcPublicId(fields.gcUrl));
+  const warning = sameLink ? `\n\nWarning: ${sameLink.name} already uses this GameChanger link.` : '';
+  if (!await confirmAction('Save opponent', `Save these changes to ${row.name}?\n\n${changes.join('\n')}${warning}`, 'Save')) return;
+  const saved = await run(() => api('saveOpponent', { teamId:row.teamId, fields }), 'Opponent saved');
+  if (!saved) return;
+  if ('gcUrl' in fields && GC_REVIEW.context === contextQuery()) { GC_REVIEW.rows.delete(row.teamId); renderOpponents(); }
+  closeOpponentEditor();
+};
 
 // ---------- config ----------
 function fillConfig() {
@@ -1492,12 +1680,18 @@ async function tdSave(makeActive = false) {
     : `${TD_EXISTING_EVENT ? 'Save changes to' : 'Add'} "${name || 'this tournament'}" for ${STATE.team.name} · ${STATE.season.name}? This updates the public tournament list. The site will set up or refresh its schedule and venue from the tournament website when needed. Open tabs will reload within ~60s.${sourceWarning}`;
   if (!await confirmAction(makeActive ? 'Save & Set Active' : 'Save tournament', message,
     makeActive ? 'Save & Set Active' : 'Save')) return null;
-  return run(async () => rememberSeason(await api('saveEvent', {
-    providerRef, newEventKey, name,
-    existingEventKey:TD_EXISTING_EVENT?.key || undefined,
-    startDate, endDate, location: $('#tdLocation').value.trim(), makeActive,
-    rulesUrl:$('#tdRules').value.trim(), config, manual:tdManualPayload(), redetected:TD_REDETECTED,
-  })), r => makeActive ? `Active tournament: ${r.name}` : `Saved: ${r.name}`);
+  return run(async () => {
+    const result = rememberSeason(await api('saveEvent', {
+      providerRef, newEventKey, name,
+      existingEventKey:TD_EXISTING_EVENT?.key || undefined,
+      startDate, endDate, location: $('#tdLocation').value.trim(), makeActive,
+      rulesUrl:$('#tdRules').value.trim(), config, manual:tdManualPayload(), redetected:TD_REDETECTED,
+    }));
+    // Follow the season's active tournament: the refresh that comes next would otherwise keep
+    // asking for the previously active one and show its games and opponents until a reload.
+    CTX.eventKey = result.activeEventKey || null;
+    return result;
+  }, r => makeActive ? `Active tournament: ${r.name}` : `Saved: ${r.name}`);
 }
 $('#tdSave').onclick = async () => { if (await tdSave()) closeTdEditor(); };
 $('#tdSaveActive').onclick = async () => { if (await tdSave(true)) closeTdEditor(); };
@@ -1730,11 +1924,12 @@ async function refreshState() {
   SNAP = snap; STATE = state;
   preferFreshSeason();
   CATALOG = STATE.catalog || CATALOG;
-  renderContext(); renderEvInfo(); renderGames(); renderGameChangerTeams(); fillConfig(); initSeason(); initMiniGameRoster(); renderStatus();
+  renderContext(); renderEvInfo(); renderGames(); renderOpponents(); fillConfig(); initSeason(); initMiniGameRoster(); renderStatus();
 }
 
-$('#unlockBtn').onclick = unlock;
-$('#secret').addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
+const unlockTyped = () => unlock($('#secret').value);
+$('#unlockBtn').onclick = unlockTyped;
+$('#secret').addEventListener('keydown', e => { if (e.key === 'Enter') unlockTyped(); });
 // Auto-unlock if a key is already stored on this device.
 if (adminKey()) unlock();
 </script>

@@ -1325,13 +1325,28 @@ const teamClass = {};   // id → team level letter "B"/"C" (live, from API stan
 let wickedRank = null;  // Wicked's live CA-NorCal teamRanking
 // True if the name already shows the level (e.g. "Bay Stars 10B", "River Cats 10U B"),
 // so we only badge teams whose name lacks it (e.g. "Harbor Hawks 10U Black").
-const nameHasLevel = (name, lvl) => new RegExp(`10\\s*U?\\s*-?\\s*${lvl}\\b`, 'i').test(name || '');
+const nameHasLevel = (name, lvl) => new RegExp(`\\b\\d{1,2}\\s*U?\\s*-?\\s*${lvl}\\b`, 'i').test(name || '');
+// The level letter to badge beside a team, or '' for none. Judged against the name ON SCREEN:
+// an edited display name usually drops the "10C" the provider's name carried, so the badge has
+// to say it instead. `level` is the best the caller knows (this tournament's level, else the
+// team's registered one); failing that, the one written in the provider's own name
+// ("Example Magic 10C", "Example Smoke 10uC").
+function teamLevelBadge(teamId, rawName, level) {
+  const shown = TEAM_DISPLAY[teamId];
+  const providerName = shown?.providerName || rawName || '';
+  const known = level || (providerName.match(/\b\d{1,2}\s*U?\s*-?\s*([BCD])\b/i)?.[1] || '').toUpperCase();
+  const displayed = shown?.name || splitRosterName(rawName || '').team;
+  return known && !nameHasLevel(displayed, known) ? known : '';
+}
 let wickedBracketFallback = null; // { time, label } computed from projected seed when bracket API unavailable
 let allTeamsGlobal = []; // all teams sorted by global seed, set by buildAllStandings
 let STREAM_LINKS = {};   // gameKey → watch/stream URL (admin-editable via the config blob)
 let GAMECHANGER_TEAMS = {}; // provider team id → confirmed GameChanger team profile URL
 let GAMECHANGER_RECORDS = {}; // provider team id → saved GameChanger season record
 let GAMECHANGER_LOCATIONS = {}; // provider team id → saved GameChanger city/state
+// provider team id → { name, coach, city, state, providerName }: each team's display properties as
+// resolved by the server (admin edits → provider → GameChanger; see lib/opponents.js).
+let TEAM_DISPLAY = {};
 let PENDING_AST_META = null;
 let AST_TEAM_NAME = '';
 function gameChangerAppUrl(url) {
@@ -1348,7 +1363,7 @@ function nextTeamNameHtml(nameHtml, teamId, teamName) {
 }
 function nextTeamRowHtml(teamId, teamName, nameHtml = null, projected = false, record = teamRecords[teamId]) {
   const name = nameHtml || (teamId
-    ? `<a class="nxt-link" onclick="showTeam(${jsArg(teamId)})">${displayTeamName(teamName)}</a>`
+    ? `<a class="nxt-link" onclick="showTeam(${jsArg(teamId)})">${displayTeamName(teamName, teamId)}</a>`
     : historyEsc(teamName || 'TBD'));
   const badge = teamId ? teamBadgeHTML(teamId, teamName) : '<div class="nxt-badge" style="background:#6b7280">?</div>';
   const wl = projected ? '<span class="nxt-proj">proj.</span>'
@@ -1357,13 +1372,14 @@ function nextTeamRowHtml(teamId, teamName, nameHtml = null, projected = false, r
     <span class="nxt-record" aria-label="Tournament record">${wl}</span>
     <span class="nxt-record nxt-gc-record">${teamId ? gameChangerRecordHtml(teamId) : '—'}</span>`;
 }
-function displayTeamName(name) {
-  return historyEsc(splitRosterName(name).team);
+function displayTeamName(name, teamId) {
+  return historyEsc(TEAM_DISPLAY[teamId]?.name || splitRosterName(name).team);
 }
 function gameChangerLocationHtml(teamId, teamName = '') {
-  const coach = splitRosterName(teamName).coach
+  const shown = TEAM_DISPLAY[teamId];
+  const coach = (shown ? shown.coach : splitRosterName(teamName).coach)
     || (teamId === MY_ID ? splitRosterName(AST_TEAM_NAME).coach : '');
-  const location = GAMECHANGER_LOCATIONS[teamId];
+  const location = shown || GAMECHANGER_LOCATIONS[teamId];
   const city = location ? [location.city, location.state].filter(Boolean).join(', ') : '';
   const label = [coach, city].filter(Boolean).join(' · ');
   return label ? `<span class="team-location">${historyEsc(label)}</span>` : '';
@@ -1611,15 +1627,18 @@ function teamInitials(name) {
 // A readable short team name for scenario prose: drop the trailing "- City" coach/city
 // tag and the "10B/10C/10U" level token (e.g. "Bay Stars 10B - Coach" -> "Bay Stars",
 // "River Cats 10B" -> "River Cats"). Falls back to the raw name if stripping empties it.
-function shortTeam(name) {
-  const s = (name || '')
-    .replace(/\s*-\s*[A-Za-z .'&]+$/, '')   // drop a trailing coach or city tag
+function shortTeam(name, teamId) {
+  // A team the server resolved already has its name apart from its coach. Splitting the printed
+  // name on a dash again would cut an edited name like "Example-Region Club" down to "Example".
+  const known = TEAM_DISPLAY[teamId]?.name;
+  const s = (known ?? (name || '').replace(/\s*-\s*[A-Za-z .'&]+$/, ''))   // drop a trailing coach or city tag
     .replace(/\s*\b10[BCUbcu]\b/, '')        // drop the "10B"/"10U" level token
     .replace(/\s{2,}/g, ' ').trim();
   return s || name || '';
 }
-function teamBadgeColor(id, name) {
-  const seed=id||name||'';            // stable per team; an unresolved bracket feed hashes its label
+// Use the display map from the tournament being drawn for unresolved team labels.
+function teamBadgeColor(id, name, display = TEAM_DISPLAY) {
+  const seed=id||display[id]?.providerName||name||'';
   let h=0; for(let i=0;i<seed.length;i++) h=(h*31+seed.charCodeAt(i))&0xFFFFFF;
   return `hsl(${h%360},50%,28%)`;
 }
@@ -2181,13 +2200,14 @@ function buildAllStandings(liveData) {
       const rds = rd===0?'—':rd>0?`+${rd}`:rd;
       const rdc = rd>0?'rdp':rd<0?'rdn':'';
       const brk = bracketMap[t.id] || {label:`${trophyIcon(3)} Bronze`,cls:'brkt-b'};
-      const srBadge = t.sr ? `<div class="s-rec-line"><span class="s-season has-rec" title="Season record (all tournaments)">${historyEsc(t.sr)} season</span></div>` : '';
-      const lvlBadge = (t.level && !nameHasLevel(t.name, t.level)) ? `<span class="s-season" title="Team level">${historyEsc(t.level)}</span>` : '';
+      const srBadge = t.sr ? `<div class="s-rec-line"><span class="s-season has-rec" title="NorCal season record (all tournaments)">${historyEsc(t.sr)} NorCal</span></div>` : '';
+      const lvl = teamLevelBadge(t.id, t.name, t.level || t.registeredLevel);
+      const lvlBadge = lvl ? `<span class="s-season" title="Team level">${historyEsc(lvl)}</span>` : '';
       const nameClass = t.me ? ' me' : t.sister ? ' sister' : '';
       const prefix = t.me ? '⭐ ' : t.sister ? '🟣 ' : '';
       return `<tr>
         <td><div class="seed ${seedClasses[i]}">${i+1}</div></td>
-        <td><div class="s-name${nameClass}"><button class="team-link" onclick="showTeam(${jsArg(t.id)})">${prefix}${displayTeamName(t.name)}${lvlBadge}</button>${gameChangerLocationHtml(t.id, t.name)}${srBadge}</div></td>
+        <td><div class="s-name${nameClass}"><button class="team-link" onclick="showTeam(${jsArg(t.id)})">${prefix}${displayTeamName(t.name, t.id)}${lvlBadge}</button>${gameChangerLocationHtml(t.id, t.name)}${srBadge}</div></td>
         <td class="s-rec">${t.w}–${t.l}${t.t?`–${t.t}`:''}</td>
         <td class="s-gc-record">${gameChangerRecordHtml(t.id)}</td>
         <td class="s-rs s-detail-col">${t.rf||0}</td>
@@ -2862,7 +2882,7 @@ function buildWickedPath() {
   };
   const oppHTML = s => {
     const t = s.opp.team;
-    if (t && t.id) return `<a class="nxt-link" onclick="showTeam(${jsArg(t.id)})">${t.seed ? `#${t.seed} ` : ''}${historyEsc(shortTeam(t.name))}</a>`;
+    if (t && t.id) return `<a class="nxt-link" onclick="showTeam(${jsArg(t.id)})">${t.seed ? `#${t.seed} ` : ''}${historyEsc(shortTeam(t.name, t.id))}</a>`;
     return `<span style="font-style:italic;opacity:.85">${historyEsc(s.opp.label || 'TBD')}</span>`;
   };
   const row = (cls, icon, lbl, s) => {
@@ -3202,9 +3222,12 @@ const jsArg=v=>historyEsc(JSON.stringify(String(v??'')));
 const historyTeamName=name=>String(name||'TBD').replace(/^\[\d+\]\s*/,'');
 const historyIsFinal=s=>['completed','won','lost','final'].includes(String(s||'').toLowerCase());
 
+// The past tournament on screen resolves its teams from its own snapshot, never from the live
+// tournament's TEAM_DISPLAY.
+let HISTORY_TEAM_DISPLAY = {};
 function historyBadge(id,name,myId,sisterId) {
   if(id===myId||id===sisterId) return '<img src="assets/icon.png" class="sb-sm-logo" alt="">';
-  return `<div class="sb-sm-badge" style="background:${teamBadgeColor(id,name)}">${historyEsc(teamInitials(name))}</div>`;
+  return `<div class="sb-sm-badge" style="background:${teamBadgeColor(id,name,HISTORY_TEAM_DISPLAY)}">${historyEsc(teamInitials(name))}</div>`;
 }
 
 function historicalPoolRecord(snap,pool,teamId) {
@@ -3500,6 +3523,7 @@ function switchHistoryBracket(button,panelId) {
 }
 
 function renderTournamentHistory(snap,row,eventId) {
+  HISTORY_TEAM_DISPLAY = snap?.config?.teamDisplay || {};
   const myId=snap.meta?.providerTeamId||NORCAL_TEAM_ID;
   const sisterId=snap.meta?.provider==='tourneymachine'?null:SISTER_ID;
   const schedule=historyScheduleHtml(snap,myId,sisterId);
@@ -3534,25 +3558,23 @@ async function loadTournamentHistorySnapshot(eventId) {
   if (seasonSnapshotCache.has(cacheKey)) return seasonSnapshotCache.get(cacheKey);
   const entry = SEASON_ARCHIVE_EVENTS[eventId];
   let snap = null;
-  if (entry?.archived) {
+  const readSnapshot = async url => {
+    try {
+      const response = await fetch(url, { cache:'no-store', signal:AbortSignal.timeout(9000) });
+      if (!response.ok) return null;
+      const candidate = await response.json();
+      return candidate?.meta && !candidate.meta.schedulePending && !candidate.comingSoon ? candidate : null;
+    } catch { return null; }
+  };
+  // The scoped endpoint serves frozen results for completed seasons with current editorial
+  // opponent edits applied. Read this tournament without changing the featured tournament.
+  if (entry?.eventKey)
+    snap = await readSnapshot('/api/snapshot?' + contextQuery(false) + '&eventKey=' + encodeURIComponent(entry.eventKey));
+  if (!snap && entry?.archived) {
     const bundle = await loadSeasonArchiveBundle();
     snap = bundle?.events?.[entry.eventKey]?.snapshot || null;
   }
-  // Past tournaments in an ongoing season retain their own structure, scores, and overrides.
-  // Read that event explicitly without changing the dashboard's featured tournament.
-  const urls = [];
-  if (entry?.eventKey && !entry.archived)
-    urls.push('/api/snapshot?' + contextQuery(false) + '&eventKey=' + encodeURIComponent(entry.eventKey));
-  if (SEASON_ARCHIVE_FILES[eventId]) urls.push(SEASON_ARCHIVE_FILES[eventId]);
-  for (const url of urls) {
-    if (snap) break;
-    try {
-      const response = await fetch(url, { cache:'no-store', signal:AbortSignal.timeout(9000) });
-      if (!response.ok) continue;
-      const candidate = await response.json();
-      if (candidate?.meta && !candidate.meta.schedulePending && !candidate.comingSoon) snap = candidate;
-    } catch {}
-  }
+  if (!snap && SEASON_ARCHIVE_FILES[eventId]) snap = await readSnapshot(SEASON_ARCHIVE_FILES[eventId]);
   if (!snap) throw new Error('saved tournament results are unavailable');
   seasonSnapshotCache.set(cacheKey, snap);
   return snap;
@@ -3617,9 +3639,9 @@ function teamModalLinksHtml(teamId, providerHref = '', providerName = '') {
 function showRegisteredTeam(name) {
   const meta = PENDING_AST_META;
   if (!meta?.ast?.teams?.includes(name)) return;
-  const { team } = splitRosterName(name);
   const key = 'name:' + String(name).toLowerCase().replace(/[^a-z0-9]/g, '');
   const gcTeamId = registeredTeamIsOurs(name, meta.ast, { name:MY_NAME }) ? MY_ID : key;
+  const team = TEAM_DISPLAY[gcTeamId]?.name || splitRosterName(name).team;
   setTeamModalHeader(team, gcTeamId, name);
   document.getElementById('modalBody').innerHTML = `
     <div style="margin-bottom:12px"><span class="pool-badge">Registered team</span></div>
@@ -3647,7 +3669,7 @@ function showTeam(teamId) {
   if(!foundTeam) return;
 
   const prefix = foundTeam.me ? '⭐ ' : foundTeam.sister ? '🟣 ' : '';
-  setTeamModalHeader(prefix + splitRosterName(foundTeam.name).team, teamId, foundTeam.name, foundPool.label);
+  setTeamModalHeader(prefix + (TEAM_DISPLAY[teamId]?.name || splitRosterName(foundTeam.name).team), teamId, foundTeam.name, foundPool.label);
 
   const rows = teamGames.map(g => {
     const isHome = g.hid===teamId;
@@ -3716,9 +3738,9 @@ function showTeam(teamId) {
   }
 
   const srVal = teamSeason[teamId] || foundTeam.sr;
-  const srInfo = srVal ? `<span style="font-size:12px;color:var(--red);font-weight:600">📊 ${historyEsc(srVal)} season record</span>` : '';
-  const lvl = teamClass[teamId];
-  const lvlInfo = (lvl && !nameHasLevel(foundTeam.name, lvl)) ? `<span class="pool-badge" title="Team level" style="background:#f3f4f6;color:var(--muted)">${historyEsc(lvl)}</span>` : '';
+  const srInfo = srVal ? `<span style="font-size:12px;color:var(--red);font-weight:600">📊 ${historyEsc(srVal)} NorCal record</span>` : '';
+  const lvl = teamLevelBadge(teamId, foundTeam.name, teamClass[teamId] || foundTeam.level || foundTeam.registeredLevel);
+  const lvlInfo = lvl ? `<span class="pool-badge" title="Team level" style="background:#f3f4f6;color:var(--muted)">${historyEsc(lvl)}</span>` : '';
   const sourceTeamId = teamId === MY_ID && ACTIVE_SOURCE_TEAM_ID ? ACTIVE_SOURCE_TEAM_ID : teamId;
   const teamHref = ACTIVE_PROVIDER === 'tourneymachine' && ACTIVE_SOURCE_URL
     ? ACTIVE_SOURCE_URL.replace('Division.aspx', 'Team.aspx') + `&IDTeam=${encodeURIComponent(sourceTeamId)}`
@@ -3837,8 +3859,8 @@ function buildScoreboard() {
   </div>
   <div class="sb-game-bottom">
     <div class="sb-game-teams">
-      <div class="sb-game-team ${hCls}"><div class="sb-team-left">${sbBadge(g.hid,g.hn)}<span class="sb-team-info"><span class="sb-team-name-line"><button class="team-link" onclick="showTeam(${jsArg(g.hid)})">${displayTeamName(g.hn)}</button></span>${gameChangerLocationHtml(g.hid, g.hn)}</span></div><span class="${hValCls}">${hVal}</span></div>
-      <div class="sb-game-team ${aCls}"><div class="sb-team-left">${sbBadge(g.aid,g.an)}<span class="sb-team-info"><span class="sb-team-name-line"><button class="team-link" onclick="showTeam(${jsArg(g.aid)})">${displayTeamName(g.an)}</button></span>${gameChangerLocationHtml(g.aid, g.an)}</span></div><span class="${aValCls}">${aVal}</span></div>
+      <div class="sb-game-team ${hCls}"><div class="sb-team-left">${sbBadge(g.hid,g.hn)}<span class="sb-team-info"><span class="sb-team-name-line"><button class="team-link" onclick="showTeam(${jsArg(g.hid)})">${displayTeamName(g.hn, g.hid)}</button></span>${gameChangerLocationHtml(g.hid, g.hn)}</span></div><span class="${hValCls}">${hVal}</span></div>
+      <div class="sb-game-team ${aCls}"><div class="sb-team-left">${sbBadge(g.aid,g.an)}<span class="sb-team-info"><span class="sb-team-name-line"><button class="team-link" onclick="showTeam(${jsArg(g.aid)})">${displayTeamName(g.an, g.aid)}</button></span>${gameChangerLocationHtml(g.aid, g.an)}</span></div><span class="${aValCls}">${aVal}</span></div>
     </div>
     <button class="sb-bell${bellOn?' on':''}" data-key="${g.key}" onclick="toggleGameNotif(${jsArg(g.key)})" title="${bellOn?'Disable':'Enable'} score alert"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
   </div>
@@ -4198,7 +4220,8 @@ function applySnapshot(snap) {
     const p = (snap.pools || {})[k]; if (!p) return;
     POOLS[k] = {
       label: p.label, poolNo: p.poolNo, roundKey: p.roundKey,
-      teams: (p.teams || []).map(t => ({ id: t.id, name: t.name, sr: t.sr, level: t.level, me: t.id === MY_ID, sister: t.id === SISTER_ID })),
+      // registeredLevel is display-only (the level badge); `level` alone decides bracket membership.
+      teams: (p.teams || []).map(t => ({ id: t.id, name: t.name, sr: t.sr, level: t.level, registeredLevel: t.registeredLevel, me: t.id === MY_ID, sister: t.id === SISTER_ID })),
       schedule: (p.games || []).map(g => ({ key: g.key, no: g.gameNo, t: g.time, fac: g.fac, facName: g.facName, field: g.field, hid: g.hid, hn: g.hn, aid: g.aid, an: g.an })),
     };
   });
@@ -4255,6 +4278,7 @@ function applySnapshot(snap) {
   GAMECHANGER_TEAMS = { ...(c.gameChangerTeams || {}) };
   GAMECHANGER_RECORDS = { ...(c.gameChangerRecords || {}) };
   GAMECHANGER_LOCATIONS = { ...(c.gameChangerLocations || {}) };
+  TEAM_DISPLAY = { ...(c.teamDisplay || {}) };
   if (c.gameChangerUrl) GAMECHANGER_TEAMS[MY_ID] = c.gameChangerUrl;
   const headerGcLink = document.getElementById('hdrGcLink');
   const headerGcUrl = gameChangerAppUrl(c.gameChangerUrl);
@@ -4510,9 +4534,9 @@ function comingSoonTeamsHtml(meta, team = {}) {
       <div class="cs-column-heading"><span>Team</span><span class="cs-wl-heading" title="Tournament record">W–L</span><img src="/assets/gamechanger-logo.png" alt="GameChanger record" title="GameChanger season record"></div>
     </div>
     <ol class="cs-team-grid">${teams.map((entry, i) => {
-      const { team } = splitRosterName(entry);
       const isUs = isOurEntry(entry);
       const teamId = isUs ? MY_ID : 'name:' + key(entry);
+      const team = TEAM_DISPLAY[teamId]?.name || splitRosterName(entry).team;
       const record = gameChangerRecordHtml(teamId);
       return `<li class="cs-team${isUs ? ' is-us' : ''}"><span class="cs-team-num">${i + 1}</span>`
         + `<span class="cs-team-name"><button class="team-link" data-registered-team="${historyEsc(entry)}"><b>${historyEsc(team)}</b></button>${gameChangerLocationHtml(teamId, entry)}</span>`

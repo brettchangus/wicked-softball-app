@@ -29,8 +29,25 @@ export async function fetchTeamStats(teamId) {
     // 2027 team) — that's a real 0–0 record with no rank yet, not missing data. Only a response
     // with neither team info nor apex (unknown team) is treated as unavailable.
     if (!data?.apex && !data?.info) return null;
-    return teamStatsFrom(data);
+    return { ...teamStatsFrom(data), location:teamLocationFrom(data), registeredLevel:teamRegisteredLevel(data) };
   } catch { return null; }
+}
+
+// Pure: the home city/state on a Team/{id} payload's `info` block (verified live — e.g.
+// city "Example City", state "CA"). null when the profile carries neither.
+export function teamLocationFrom(data = {}) {
+  const city = String(data.info?.city || '').trim();
+  const state = String(data.info?.state || '').trim();
+  return city || state ? { city, state } : null;
+}
+
+// Pure: the skill letter a team is REGISTERED at, from the profile's `info.teamClass` ("10-B" ->
+// "B"). Unlike `apex.teamClass` it is there before the team has played a game this season
+// (verified live: about half a fall tournament's teams had no `apex` block at all). Letters only —
+// "10-Rec" and "10-Open" give null.
+export function teamRegisteredLevel(data = {}) {
+  const level = teamClassLevel(data.info?.teamClass);
+  return /^[A-D]$/.test(level || '') ? level : null;
 }
 
 // Pure: the season stats a Team/{id} payload describes (exported for tests).
@@ -581,6 +598,13 @@ export async function buildStructure(eventId, { myId, agePrefix = '10', division
   const stats = await Promise.all(ids.map(id => fetchTeamStatsFn(id)));
   const statMap = Object.fromEntries(ids.map((id, i) => [id, stats[i]]));
   teamList.forEach(t => { const s = statMap[t.id]; if (s) { if (s.season) t.sr = s.season; if (s.level && !t.level) t.level = s.level; } });
+  // The registered level is for DISPLAY only (the dashboard's level badge). It is kept apart from
+  // `level`, which decides bracket membership and stays exactly as before: a team can be registered
+  // at one level and placed in another level's bracket here.
+  teamList.forEach(t => { const registered = statMap[t.id]?.registeredLevel; if (registered) t.registeredLevel = registered; });
+  // Each team's home city/state rides along on the same profile — the default location shown
+  // beside an opponent (see lib/opponents.js) until an admin overrides it.
+  teamList.forEach(t => { const where = statMap[t.id]?.location; if (where) { if (where.city) t.city = where.city; if (where.state) t.state = where.state; } });
   // Combined division → infer each bracket's division from team levels. Split divisions already
   // carry their division (skip — the counts heuristic could mis-assign across separate divisions).
   if (!multiDiv) assignBracketDivisions(brackets, teamList);

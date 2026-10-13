@@ -12,6 +12,7 @@ import { fetchTeamStats } from './norcal.js';
 import { fetchTourneyMachine, normalizeTourneyMachineIds, buildTourneyMachineStructureFromParsed, reconcileTourneyMachineStructure } from './tourneymachine.js';
 import { parseEventRef } from './providers.js';
 import { readResults, writeResults, readConfig, writeConfig, writeSeason, writeStructure } from './snapshot.js';
+import { loadTeamDisplay } from './team-display.js';
 
 const POOL_API    = (roundKey, n) => `https://norcal.registerplay.com/api/v1/EP/poolDisplay/false/${roundKey}/${n}/0`;
 const BRACKET_API = (id) => `https://norcal.registerplay.com/api/v1/EP/Round/bracket/${id}/false`;
@@ -200,6 +201,14 @@ export async function runScoreCheck(eventId, structure, { force = false, context
   };
 
   const pushTasks = [];
+  // Opponents print under the name the dashboard shows (an admin's name/coach edits). Resolved
+  // on the first push only — most score checks send none.
+  const pushStructure = structure;
+  let displayLoad = null;
+  const teamDisplay = () => (displayLoad ||= loadTeamDisplay(context?.scope || null, pushStructure, {
+    opponents:context?.event?.config?.opponents, links:context?.event?.config?.gameChangerTeams,
+    ownUrl:context?.season?.teamConfig?.gameChangerUrl,
+  }).catch(() => ({})));
   // Push once on the completed transition, to subscribers who belled this game.
   function maybePush(key, g, prevStatus, newStatus) {
     if (!(isFinal(newStatus) && prevStatus && !isFinal(prevStatus))) return;
@@ -207,17 +216,23 @@ export async function runScoreCheck(eventId, structure, { force = false, context
     if (!recipients.length) return;
     const ts = g.topScore ?? 0, bs = g.botScore ?? 0;
     const isWicked = g.topId === activeTeamId || g.botId === activeTeamId;
-    let title, body;
-    if (isWicked) {
-      const top = g.topId === activeTeamId, ws = top ? ts : bs, os = top ? bs : ts;
-      const opp = top ? g.botName : g.topName;
-      title = ws > os ? `✅ ${myName} Win!` : `❌ ${myName} Loss`;
-      body = `${opp} ${os}\n${myName} ${ws}`;
-    } else {
-      title = 'Final Score';
-      body = `${g.topName} ${ts}\n${g.botName} ${bs}`;
-    }
-    pushTasks.push(sendToAll(recipients, { title, body, tag:key, url:pushUrl }, subsStore));
+    const { topId, botId, topName:providerTop, botName:providerBot } = g;
+    pushTasks.push((async () => {
+      const display = await teamDisplay();
+      const shownName = (id, name) => (id !== activeTeamId && display[id]?.label) || name;
+      const topName = shownName(topId, providerTop), botName = shownName(botId, providerBot);
+      let title, body;
+      if (isWicked) {
+        const top = topId === activeTeamId, ws = top ? ts : bs, os = top ? bs : ts;
+        const opp = top ? botName : topName;
+        title = ws > os ? `✅ ${myName} Win!` : `❌ ${myName} Loss`;
+        body = `${opp} ${os}\n${myName} ${ws}`;
+      } else {
+        title = 'Final Score';
+        body = `${topName} ${ts}\n${botName} ${bs}`;
+      }
+      return sendToAll(recipients, { title, body, tag:key, url:pushUrl }, subsStore);
+    })());
   }
 
   // Tourney Machine exposes the whole division as one public HTML page. Refresh its

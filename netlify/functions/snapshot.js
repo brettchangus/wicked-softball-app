@@ -13,6 +13,8 @@ import { seasonRecordWithExternal } from './lib/season-record.js';
 import { mergeRecentResults } from './lib/recent-results.js';
 import { gameChangerLinksForContext, resolvedGameChangerLinks } from './lib/gamechanger.js';
 import { recordsForGameChangerLinks, locationsForGameChangerLinks } from './lib/gamechanger-records.js';
+import { applyTeamDisplay, editedTeamLabels, withRecentResultNames } from './lib/opponents.js';
+import { loadTeamDisplay } from './lib/team-display.js';
 
 // A team can exist without a resolvable season/event yet (a newly-created team, or a season with
 // no featured event). Rather than a hard 404, return a friendly "coming soon" payload the client
@@ -142,6 +144,17 @@ export default async function handler(req) {
   const savedGameChangerProfiles = await readGameChangerRecords(scope);
   snap.config.gameChangerRecords = recordsForGameChangerLinks(recordLinks, savedGameChangerProfiles);
   snap.config.gameChangerLocations = locationsForGameChangerLinks(recordLinks, savedGameChangerProfiles);
+  // Opponent display edits (name / coach / location) are editorial too. Names are rewritten in
+  // the served games, and `teamDisplay` gives the page each team's resolved parts by id.
+  const display = await loadTeamDisplay(scope, snap, {
+    opponents:{ ...(archivedEvent?.config?.opponents || {}), ...(event.config?.opponents || {}) },
+    links:snap.config.gameChangerTeams, ownUrl:snap.config.gameChangerUrl, profiles:savedGameChangerProfiles,
+  });
+  snap = applyTeamDisplay(snap, display);
+  delete snap.config.opponents;
+  snap.config.teamDisplay = Object.fromEntries(Object.entries(display).map(([id, row]) => [id, {
+    name:row.name, coach:row.coach, city:row.city, state:row.state, providerName:row.providerName,
+  }]));
   if (seasonIsComplete(season) && servedFinalStats) {
     const f = servedFinalStats;
     snap.wicked = {
@@ -157,6 +170,19 @@ export default async function handler(req) {
     snap.wicked = { ...(snap.wicked || snap.meta?.wicked || {}), season:computedRecord, seasonFrozen:true };
   }
   snap.wicked = mergeRecentResults(snap.wicked || snap.meta?.wicked, eventSnapshots.filter(Boolean));
+  // Recent Results name opponents as the provider did; apply each tournament's own name/coach
+  // edits to its games. Other tournaments are only resolved when they actually carry such an edit.
+  const labelsByEvent = { [String(snap.meta?.eventId)]:editedTeamLabels(display) };
+  await Promise.all(Object.entries(servedEvents).map(async ([key, item], i) => {
+    const eventSnap = eventSnapshots[i];
+    const edits = { ...(item.config?.opponents || {}), ...(season.events?.[key]?.config?.opponents || {}) };
+    if (key === context.eventKey || !eventSnap?.meta?.eventId
+      || !Object.values(edits).some(edit => edit?.name || edit?.coach)) return;
+    const links = { ...(item.config?.gameChangerTeams || {}), ...(season.events?.[key]?.config?.gameChangerTeams || {}) };
+    labelsByEvent[String(eventSnap.meta.eventId)] = editedTeamLabels(await loadTeamDisplay(
+      { teamKey:context.teamKey, seasonKey:context.seasonKey, eventKey:key }, eventSnap, { opponents:edits, links }));
+  }));
+  snap.wicked = withRecentResultNames(snap.wicked, labelsByEvent);
   snap.seasonData = servedSeason.seasonData?.length ? servedSeason.seasonData : null;
   snap.seasonFinishes = Object.fromEntries(
     Object.values(servedEvents)

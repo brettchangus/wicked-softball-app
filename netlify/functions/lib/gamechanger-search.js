@@ -9,8 +9,12 @@ export function gameChangerNameParts(name) {
   return { team:(match?.[1] || text).trim(), coach:(match?.[2] || '').trim() };
 }
 
-export function gameChangerSearchTerms(name) {
-  const { team } = gameChangerNameParts(name);
+// `parts` carries an admin-edited team/coach; without it they are read from the roster name.
+const expectedNameParts = (name, parts) => (parts?.team
+  ? { team:String(parts.team).trim(), coach:String(parts.coach || '').trim() } : gameChangerNameParts(name));
+
+export function gameChangerSearchTerms(name, parts = null) {
+  const { team } = expectedNameParts(name, parts);
   const words = withoutAge(team).split(/\s+/).filter(Boolean);
   const terms = [team];
   for (let count = 1; count <= 2 && count < words.length; count++) {
@@ -26,11 +30,13 @@ export function gameChangerSeason(date) {
   return month <= 5 ? 'spring' : month <= 8 ? 'summer' : 'fall';
 }
 
-export function gameChangerCandidates(hits, { name, age, date, state = 'CA' } = {}) {
-  const expectedParts = gameChangerNameParts(name);
+export function gameChangerCandidates(hits, { name, team, coach, city:knownCity, age, date, state = 'CA' } = {}) {
+  const edited = team ? { team, coach } : null;
+  const expectedParts = expectedNameParts(name, edited);
   const expected = compact(expectedParts.team);
   const expectedCoach = compact(expectedParts.coach);
-  const expectedCores = gameChangerSearchTerms(name).map(compact).filter(Boolean);
+  const expectedCity = compact(knownCity);
+  const expectedCores = gameChangerSearchTerms(name, edited).map(compact).filter(Boolean);
   const expectedAge = String(age || name || '').match(/\b(\d{1,2})\s*[uabc]\b/i)?.[1]
     || String(age || '').match(/\d{1,2}/)?.[0];
   const expectedYear = Number(String(date || '').slice(0, 4));
@@ -48,7 +54,8 @@ export function gameChangerCandidates(hits, { name, age, date, state = 'CA' } = 
       const exactName = !!expected && normalized === expected;
       const coreMatch = expectedCores.some(core => normalized === core || normalized.endsWith(core) || normalized.startsWith(core));
       const city = String(result.location?.city || '');
-      const cityMatch = !!city && compact(expectedParts.team).startsWith(compact(city));
+      const cityMatch = !!city && (compact(expectedParts.team).startsWith(compact(city))
+        || (!!expectedCity && compact(city) === expectedCity));
       const staff = Array.isArray(result.staff) ? result.staff.map(person => typeof person === 'string'
         ? person : [person?.name, person?.first_name, person?.last_name].filter(Boolean).join(' ')) : [];
       const coachMatch = !!expectedCoach && compact([label, ...staff].join(' ')).includes(expectedCoach);
@@ -75,8 +82,8 @@ export function gameChangerCandidates(hits, { name, age, date, state = 'CA' } = 
 }
 
 export async function searchGameChangerTeams(name, options = {}, fetchImpl = fetch) {
-  const token = String(options.token || process.env.GAMECHANGER_TOKEN || '').trim();
-  if (!token) throw new Error('Enter a GameChanger token in the admin page or configure GAMECHANGER_TOKEN');
+  const token = String(options.token || '').trim();
+  if (!token) throw new Error('Enter a GameChanger token in the admin page');
   const season = gameChangerSeason(options.date);
   const year = Number(String(options.date || '').slice(0, 4));
   const filters = { sport:'softball', include_older_seasons:false,
@@ -96,9 +103,11 @@ export async function searchGameChangerTeams(name, options = {}, fetchImpl = fet
     }
     return (await response.json()).hits || [];
   };
-  const terms = gameChangerSearchTerms(name);
+  const parts = options.team ? { team:options.team, coach:options.coach } : null;
+  const terms = gameChangerSearchTerms(name, parts);
   const firstHits = await search(terms[0]);
   const hits = firstHits.length ? firstHits : (await Promise.all(terms.slice(1).map(search))).flat();
   const unique = [...new Map(hits.map(hit => [hit.result?.public_id, hit])).values()];
-  return gameChangerCandidates(unique, { name, age:options.age, date:options.date, state:filters.states[0] });
+  return gameChangerCandidates(unique, { name, ...(parts || {}), city:options.city,
+    age:options.age, date:options.date, state:filters.states[0] });
 }

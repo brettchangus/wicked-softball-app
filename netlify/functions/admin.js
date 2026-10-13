@@ -11,7 +11,7 @@ import {
   readCatalog, writeCatalog, readTeam, writeTeam, readSeason, writeSeason,
   ensureScopedModel, resolveContext, readScopedArchive, writeScopedArchive, bumpRev, mergeSnapshot,
   deleteTeamRecord, deleteSeasonRecord, deleteSeasonRev, deleteScopedEvent, clearScopedEventLiveLayers, deleteArchiveRecord,
-  useStrongBlobConsistency,
+  useStrongBlobConsistency, readGameChangerRecords,
 } from './lib/snapshot.js';
 import {
   canonicalSeasonData, effectiveSelection, eventsFromSeasonData, keyFromName, normalizeKey, publicCatalog,
@@ -29,7 +29,10 @@ import {
 } from './lib/minigame.js';
 import { gameChangerLinksForContext, gameChangerOpponents, resolvedGameChangerLinks } from './lib/gamechanger.js';
 import { searchGameChangerTeams } from './lib/gamechanger-search.js';
-import { refreshGameChangerRecords } from './lib/gamechanger-records.js';
+import { refreshGameChangerRecords, locationsForGameChangerLinks } from './lib/gamechanger-records.js';
+import {
+  normalizeOpponentFields, opponentOverrides, opponentRows, opponentSearchInput, providerTeamLocations,
+} from './lib/opponents.js';
 
 function linkedGameChangerRecordUrls(context, structure) {
   const links = resolvedGameChangerLinks(structure, gameChangerLinksForContext(context,
@@ -38,6 +41,43 @@ function linkedGameChangerRecordUrls(context, structure) {
   const ownUrl = context.season?.teamConfig?.gameChangerUrl;
   if (ownId && ownUrl) links[ownId] = ownUrl;
   return links;
+}
+
+// A https://web.gc.com/teams/… profile URL, normalized; null when it is anything else.
+function gameChangerProfileUrl(rawUrl) {
+  let parsed;
+  try { parsed = new URL(String(rawUrl || '').trim()); } catch { return null; }
+  return parsed.protocol === 'https:' && parsed.hostname === 'web.gc.com' && /^\/teams\/[^/]+/.test(parsed.pathname)
+    ? parsed.href : null;
+}
+
+// Opponent edits change one tournament's config inside the whole season record. Re-read the
+// season right before writing and touch only that config, so a save made elsewhere while this
+// request was working (a GameChanger search can take seconds) is not overwritten.
+async function updateEventConfig(context, mutate) {
+  const season = await readSeason(context.teamKey, context.seasonKey) || context.season;
+  const event = season.events?.[context.eventKey];
+  if (!event) throw new Error(`unknown event: ${context.eventKey}`);
+  event.config = event.config || {};
+  mutate(event.config);
+  await writeSeason(season);
+  context.season = season;
+  context.event = event;
+  return event.config;
+}
+
+function setGameChangerLink(config, teamId, url, name) {
+  const priorUrl = config.gameChangerTeams?.[teamId];
+  const gcName = String(name || '').trim().slice(0, 120)
+    || (priorUrl === url ? config.gameChangerTeamNames?.[teamId] : '') || '';
+  config.gameChangerTeams = { ...(config.gameChangerTeams || {}), [teamId]:url };
+  config.gameChangerTeamNames = { ...(config.gameChangerTeamNames || {}), [teamId]:gcName || null };
+  return gcName || null;
+}
+
+function clearGameChangerLink(config, teamId) {
+  config.gameChangerTeams = { ...(config.gameChangerTeams || {}), [teamId]:null };
+  config.gameChangerTeamNames = { ...(config.gameChangerTeamNames || {}), [teamId]:null };
 }
 
 export default async function handler(req) {
@@ -93,9 +133,11 @@ export default async function handler(req) {
             subscriberCount: blobs.length, meta:null,
           });
         }
-        const [structure, overrides] = event ? await Promise.all([
-          readStructure(eventId, scope), readOverrides(eventId, scope),
-        ]) : [null, {}];
+        const [structure, overrides, gameChangerProfiles] = event ? await Promise.all([
+          readStructure(eventId, scope), readOverrides(eventId, scope), readGameChangerRecords(scope),
+        ]) : [null, {}, {}];
+        const gameChangerLinks = resolvedGameChangerLinks(structure,
+          gameChangerLinksForContext(context, event?.config?.gameChangerTeams));
         // Each tournament's provider-discovered venue (from its last setup), so the tournament
         // editor can show what the weather card uses when no lat/lon override is set.
         const eventVenues = Object.fromEntries(await Promise.all(Object.values(season.events || {})
@@ -109,6 +151,10 @@ export default async function handler(req) {
           team, season,
           activeEventId:eventId, activeEventKey:event?.key || null, overrides,
           gameChangerOpponents:gameChangerOpponents(structure),
+          // The Opponents card: each opponent's resolved display values, the defaults they fall
+          // back to, and what the admin has overridden.
+          opponents:opponentRows(structure, event?.config?.opponents,
+            locationsForGameChangerLinks(gameChangerLinks, gameChangerProfiles)),
           seedingDefaults:{ ast:AST_DEFAULT_SEEDING_RULES },
           // Compatibility shape used by the existing admin form while its controls migrate.
           config:{
@@ -118,8 +164,7 @@ export default async function handler(req) {
             seasonFinalStats:season.finalStats || null,
             events:event ? { [eventId]:{
               ...(event.config || {}),
-              gameChangerTeams:resolvedGameChangerLinks(structure,
-                gameChangerLinksForContext(context, event.config?.gameChangerTeams)),
+              gameChangerTeams:gameChangerLinks,
               gameChangerTeamNames:resolvedGameChangerLinks(structure,
                 event.config?.gameChangerTeamNames),
             } } : {},
@@ -175,7 +220,7 @@ export default async function handler(req) {
           const structure = await readStructure(eventId, scope);
           const ownId = structure?.meta?.providerTeamId;
           if (ownId) await refreshGameChangerRecords(scope, linkedGameChangerRecordUrls(context, structure),
-            { teamIds:[ownId] }).catch(() => {});
+            { teamIds:[ownId], updateLocation:true }).catch(() => {});
         }
         return await done(scope, { eventId, event:event.config, ...season.teamConfig });
       }
@@ -196,36 +241,94 @@ export default async function handler(req) {
           ? [[String(body.teamId), opponents.get(String(body.teamId))]]
           : [...opponents].filter(([id]) => !resolvedGameChangerLinks(structure,
             gameChangerLinksForContext(context, event.config?.gameChangerTeams))[id]);
+        // Match against the admin's edits first (a single-team search may send the editor's
+        // unsaved draft), then the provider's own name and location.
+        const savedOverrides = opponentOverrides(structure, event.config?.opponents);
+        const providerLocations = providerTeamLocations(structure);
+        let draft = {};
+        if (action === 'searchGameChangerTeam' && body.draft && typeof body.draft === 'object') {
+          const checked = normalizeOpponentFields(body.draft);
+          if (checked.error) return json({ error:checked.error }, 400);
+          draft = checked.fields;
+        }
         const results = await Promise.all(targets.map(async ([teamId, name]) => {
           try {
-            const candidates = await searchGameChangerTeams(name, { age, date, token:body.gcToken });
+            const input = opponentSearchInput(name, {
+              override:{ ...(savedOverrides[teamId] || {}), ...draft }, provider:providerLocations[teamId] });
+            const candidates = await searchGameChangerTeams(input.name, { age, date, token:body.gcToken,
+              team:input.team, coach:input.coach, city:input.city, state:input.state || undefined });
             return { teamId, name, candidates };
           } catch (error) {
             return { teamId, name, candidates:[], error:error.message };
           }
         }));
-        const authError = results.find(row => /GAMECHANGER_TOKEN|token expired/.test(row.error || ''));
-        if (authError) return json({ error:authError.error }, 503);
+        const authError = results.find(row => /Enter a GameChanger token|token expired/.test(row.error || ''));
+        if (authError) return json({ error:authError.error, code:'gameChangerToken' }, 503);
         if (action === 'autoFindGameChangerTeams' && results.length && results.every(row => row.error))
           return json({ error:results[0].error }, 502);
         if (action === 'searchGameChangerTeam') return json({ ok:true, ...results[0] });
+        const confident = results.flatMap(row => {
+          const sure = row.candidates.filter(candidate => candidate.autoMatch);
+          return sure.length === 1 ? [{ teamId:row.teamId, name:row.name, url:sure[0].url, gcName:sure[0].name }] : [];
+        });
         const matched = [];
-        for (const row of results) {
-          const confident = row.candidates.filter(candidate => candidate.autoMatch);
-          if (confident.length !== 1) continue;
-          event.config = event.config || {};
-          event.config.gameChangerTeams = { ...(event.config.gameChangerTeams || {}), [row.teamId]:confident[0].url };
-          event.config.gameChangerTeamNames = { ...(event.config.gameChangerTeamNames || {}), [row.teamId]:confident[0].name };
-          matched.push({ teamId:row.teamId, name:row.name, url:confident[0].url });
-        }
-        if (matched.length) {
-          await writeSeason(season);
+        if (confident.length) {
+          await updateEventConfig(context, config => {
+            for (const row of confident) {
+              // A link saved while the searches ran wins over the automatic match.
+              if (config.gameChangerTeams?.[row.teamId]) continue;
+              setGameChangerLink(config, row.teamId, row.url, row.gcName);
+              matched.push({ teamId:row.teamId, name:row.name, url:row.url });
+            }
+          });
           await refreshGameChangerRecords(scope, linkedGameChangerRecordUrls(context, structure),
-            { teamIds:matched.map(row => row.teamId) }).catch(() => {});
+            { teamIds:matched.map(row => row.teamId), updateLocation:true }).catch(() => {});
         }
-        return await done(scope, { matched, unresolved:results.filter(row => !matched.some(item => item.teamId === row.teamId)),
+        return await done(scope, { matched, unresolved:results.filter(row => !confident.some(item => item.teamId === row.teamId)),
           failed:results.filter(row => row.error) });
       }
+      // One save for an opponent's editable properties. `fields` carries only what changed:
+      // name / coach / city / state ('' = fall back to the provider's value) and gcUrl / gcName
+      // ('' gcUrl = remove the link).
+      case 'saveOpponent': {
+        const teamId = String(body.teamId || '').trim();
+        const input = body.fields && typeof body.fields === 'object' ? body.fields : {};
+        if (!teamId) return json({ error:'team required' }, 400);
+        const structure = await readStructure(eventId, scope);
+        if (!gameChangerOpponents(structure).some(t => t.teamId === teamId))
+          return json({ error:'team is not in this tournament' }, 400);
+        const checked = normalizeOpponentFields(input);
+        if (checked.error) return json({ error:checked.error }, 400);
+        let link;                                   // undefined = unchanged, null = remove
+        if ('gcUrl' in input) {
+          const rawUrl = String(input.gcUrl || '').trim();
+          link = rawUrl ? gameChangerProfileUrl(rawUrl) : null;
+          if (rawUrl && !link) return json({ error:'use a https://web.gc.com/teams/... profile URL' }, 400);
+        }
+        if (!Object.keys(checked.fields).length && link === undefined && !('gcName' in input))
+          return json({ error:'nothing to save' }, 400);
+        const saved = await updateEventConfig(context, config => {
+          if (Object.keys(checked.fields).length) {
+            // Start from the override as resolved (one saved against a pending schedule's
+            // name-based key follows the team to its published id) and keep the entry even when
+            // empty, so a cleared field is not re-filled from that older key.
+            const current = { ...(opponentOverrides(structure, config.opponents)[teamId] || {}) };
+            for (const [key, value] of Object.entries(checked.fields)) {
+              if (value) current[key] = value; else delete current[key];
+            }
+            config.opponents = { ...(config.opponents || {}), [teamId]:current };
+          }
+          if (link) setGameChangerLink(config, teamId, link, input.gcName);
+          else if (link === null) clearGameChangerLink(config, teamId);
+          else if ('gcName' in input && config.gameChangerTeams?.[teamId])
+            setGameChangerLink(config, teamId, config.gameChangerTeams[teamId], input.gcName);
+        });
+        if (link) await refreshGameChangerRecords(scope, linkedGameChangerRecordUrls(context, structure),
+          { teamIds:[teamId], updateLocation:true }).catch(() => {});
+        return await done(scope, { teamId, opponent:saved.opponents?.[teamId] || {},
+          url:saved.gameChangerTeams?.[teamId] || null, name:saved.gameChangerTeamNames?.[teamId] || null });
+      }
+      // Compatibility aliases — the Opponents editor saves through saveOpponent.
       case 'setGameChangerTeamLink': {
         const teamId = String(body.teamId || '').trim();
         const rawUrl = String(body.url || '').trim();
@@ -233,33 +336,24 @@ export default async function handler(req) {
         const structure = await readStructure(eventId, scope);
         const known = gameChangerOpponents(structure).some(t => t.teamId === teamId);
         if (!known) return json({ error:'team is not in this tournament' }, 400);
-        let parsed;
-        try { parsed = new URL(rawUrl); } catch { return json({ error:'invalid GameChanger URL' }, 400); }
-        if (parsed.protocol !== 'https:' || parsed.hostname !== 'web.gc.com' || !/^\/teams\/[^/]+/.test(parsed.pathname))
-          return json({ error:'use a https://web.gc.com/teams/... profile URL' }, 400);
-        event.config = event.config || {};
-        const priorUrl = event.config.gameChangerTeams?.[teamId];
-        event.config.gameChangerTeams = { ...(event.config.gameChangerTeams || {}), [teamId]:parsed.href };
-        const gcName = String(body.name || '').trim().slice(0, 120)
-          || (priorUrl === parsed.href ? event.config.gameChangerTeamNames?.[teamId] : '') || '';
-        event.config.gameChangerTeamNames = { ...(event.config.gameChangerTeamNames || {}), [teamId]:gcName || null };
-        await writeSeason(season);
+        try { new URL(rawUrl); } catch { return json({ error:'invalid GameChanger URL' }, 400); }
+        const link = gameChangerProfileUrl(rawUrl);
+        if (!link) return json({ error:'use a https://web.gc.com/teams/... profile URL' }, 400);
+        let gcName = null;
+        await updateEventConfig(context, config => { gcName = setGameChangerLink(config, teamId, link, body.name); });
         await refreshGameChangerRecords(scope, linkedGameChangerRecordUrls(context, structure),
-          { teamIds:[teamId] }).catch(() => {});
-        return await done(scope, { teamId, url:parsed.href, name:gcName || null });
+          { teamIds:[teamId], updateLocation:true }).catch(() => {});
+        return await done(scope, { teamId, url:link, name:gcName });
       }
       case 'refreshGameChangerRecords': {
         const structure = await readStructure(eventId, scope);
         const result = await refreshGameChangerRecords(scope, linkedGameChangerRecordUrls(context, structure));
-        return await done(scope, { updated:result.updated, failed:result.failed });
+        return await done(scope, { records:result.records, checked:result.checked, changed:result.changed, updated:result.updated, failed:result.failed });
       }
       case 'clearGameChangerTeamLink': {
         const teamId = String(body.teamId || '').trim();
         if (!teamId) return json({ error:'team required' }, 400);
-        event.config = event.config || {};
-        event.config.gameChangerTeams = { ...(event.config.gameChangerTeams || {}), [teamId]:null };
-        event.config.gameChangerTeamNames = { ...(event.config.gameChangerTeamNames || {}), [teamId]:null };
-        await writeSeason(season);
+        await updateEventConfig(context, config => clearGameChangerLink(config, teamId));
         return await done(scope, { teamId, cleared:true });
       }
 

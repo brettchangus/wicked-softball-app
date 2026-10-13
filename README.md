@@ -12,6 +12,7 @@ Built with vanilla JavaScript and Netlify Functions. Team and season data are co
 - **Homerun Derby:** Play with a roster configured for the selected season. Each season keeps its own leaderboard, including after the season is completed.
 - **Score alerts:** Opt in to in-page or web-push notifications for individual games. Push notifications require additional site configuration.
 - **Multi-team administration:** Create teams and seasons, configure tournaments and rosters, manage results, and choose which season appears on the default route.
+- **Opponent details:** Edit an opponent’s display name, coach, city, state, and GameChanger link per tournament. Corrections apply to the dashboard, chat, score alerts, recent results, and completed-tournament overlays.
 - **Provider integrations:** Tournament discovery and score updates support NorCal, Tourney Machine, and AST event sources. Optional GameChanger links and records enrich team details.
 - **Optional chat assistant:** Ask about tournament information when an Anthropic API key is configured.
 
@@ -29,6 +30,8 @@ The frontend is a single-page PWA in `index.html`. Netlify Functions discover to
 Tournament discovery needs an appropriate provider event reference and team identity. A newly deployed site shows a coming-soon view until it is configured.
 
 ### Local development
+
+For a local preview with the real functions and an in-memory Blob store, run `node scripts/dev-server.mjs` after installing the function dependencies. Open `http://localhost:3001/admin` and use the local-only secret `local-admin` (or the configured `ADMIN_SECRET`). Saves last only until the process exits; the catalog starts empty. Use Node.js 24 for this preview server.
 
 Copy `.env.example` to `.env`, supply the values needed for the features you want to test, and run `netlify dev` with the Netlify CLI. A static file server can preview the interface but cannot run the functions or load site data. Run the included tests with Node.js. Several tests replace Netlify Blobs with an in-memory store, so install the function dependencies first:
 
