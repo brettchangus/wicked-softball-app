@@ -70,7 +70,7 @@ export function parseAstMeta(html) {
   // region name) — unfiltered. parseAstPage narrows this to one region; detectAstEvent lists them
   // all as region candidates.
   const scheduleLinks = links.filter(l => {
-    try { const u = new URL(l.url); return u.hostname === 'tourneymachine.com' && u.pathname === '/Public/Results/Tournament.aspx'; } catch { return false; }
+    try { const u = new URL(l.url); return u.hostname === 'tourneymachine.com' && ['/Public/Results/Tournament.aspx', '/Public/Results/Division.aspx'].includes(u.pathname); } catch { return false; }
   }).map(l => ({ region:l.label, url:l.url }));
   const rulesUrl = links.find(l => /rules.*10/i.test(l.label) && /\.pdf$/i.test(l.url))?.url || null;
   const venues = links.filter(l => /(?:maps\.google\.com|www\.google\.com\/maps)/i.test(l.url));

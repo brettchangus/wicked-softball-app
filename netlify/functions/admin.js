@@ -22,6 +22,7 @@ import {
 } from './lib/archive.js';
 import { DEFAULT_TEAM_KEY } from './lib/tournament.js';
 import { parseAge } from './lib/divisions.js';
+import { AST_DEFAULT_SEEDING_RULES, normalizeSeedingRules } from './lib/seeding.js';
 import {
   boardCacheKey, boardKey, effectiveRoster, isDefaultMiniGameContext, LEGACY_BOARD_KEY, normalizeRoster,
   scorePrefix,
@@ -108,6 +109,7 @@ export default async function handler(req) {
           team, season,
           activeEventId:eventId, activeEventKey:event?.key || null, overrides,
           gameChangerOpponents:gameChangerOpponents(structure),
+          seedingDefaults:{ ast:AST_DEFAULT_SEEDING_RULES },
           // Compatibility shape used by the existing admin form while its controls migrate.
           config:{
             ...(season.teamConfig || {}),
@@ -448,6 +450,12 @@ export default async function handler(req) {
         const rawProviderRef = String(body.providerRef || '').trim();
         if (!rawProviderRef) return json({ error:'providerRef required' }, 400);
         const manual = body.manual && typeof body.manual === 'object' ? body.manual : {};
+        // Validate before any provider work or writes.
+        let seedingRules;
+        if (body.config && typeof body.config === 'object' && Object.hasOwn(body.config, 'seedingRules')) {
+          try { seedingRules = normalizeSeedingRules(body.config.seedingRules); }
+          catch (error) { return json({ error:error.message }, 400); }
+        }
         const kind = classifyProviderRef(rawProviderRef);
         let providerRef = rawProviderRef, detected = {}, detectionProvider = kind;
 
@@ -540,6 +548,8 @@ export default async function handler(req) {
         const nextConfig = { ...(existing?.config || {}), ...(rulesUrl != null ? { rulesUrl } : {}) };
         for (const key of ['accuweatherUrl', 'knownPlacement', 'venue'])
           if (Object.hasOwn(incomingConfig, key)) nextConfig[key] = incomingConfig[key];
+        // null clears a saved rule set, back to the provider default (AST) or unverified.
+        if (seedingRules !== undefined) nextConfig.seedingRules = seedingRules;
         // An admin-entered result is an override the score check must not replace; clearing it
         // falls back to the automatically captured placement, if there is one.
         if (Object.hasOwn(incomingConfig, 'knownPlacement')) {

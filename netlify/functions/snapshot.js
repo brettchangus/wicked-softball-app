@@ -7,6 +7,7 @@ import {
 } from './lib/snapshot.js';
 import { ordinalSuffix, publicCatalog, seasonIsComplete } from './lib/context.js';
 import { verifyArchiveBundle } from './lib/archive.js';
+import { withSeedingRules } from './lib/seeding.js';
 import { effectiveRoster } from './lib/minigame.js';
 import { seasonRecordWithExternal } from './lib/season-record.js';
 import { mergeRecentResults } from './lib/recent-results.js';
@@ -77,6 +78,7 @@ export default async function handler(req) {
   }
   if (!snap) return json({ error:'no snapshot yet' }, 503);
   const archivedEvent = archiveBundle?.events?.[context.eventKey];
+  snap = withSeedingRules(snap, archivedEvent || event);
   const servedTeam = archiveBundle?.team || team;
   const servedSeason = archiveBundle?.season || season;
   const servedEvents = archiveBundle?.events || season.events || {};

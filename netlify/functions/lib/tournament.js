@@ -18,5 +18,5 @@ export const EVENT_KEY          = DEFAULT_EVENT_KEY;
 export const RULES_URL     = '';
 // Bump when buildStructure's shape changes — forces check-scores to re-run setup even
 // though the event id is unchanged (otherwise the old structure blob would persist).
-export const SETUP_VERSION = 14;
+export const SETUP_VERSION = 15;
 export const VAPID_SUBJECT = process.env.VAPID_SUBJECT || 'mailto:admin@example.com';

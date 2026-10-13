@@ -371,9 +371,8 @@ export async function buildTourneyMachineStructureFromParsed(ref, parsed, {
     const key = membership.get(g.topId) || keys[0];
     pools[key].games.push({ key:g.key, sourceGameId:g.sourceGameId, gameNo:g.gameNo,time:g.time,fac:g.fac,facName:g.facName,field:g.field,hid:g.topId,hn:g.topName,aid:g.botId,an:g.botName });
   }
-  // Multi-pool seed numbers are local, not global ranks. Keep the official labels until
-  // assigned teams arrive instead of projecting an opponent from the wrong pool.
-  if (keys.length > 1) for (const g of frame) { g.topSeed = null; g.botSeed = null; }
+  // Preserve pool + seed together for the shared scenario engine. Legacy global-seed
+  // renderers stay gated by projectionUnsupported; they must not interpret A1 as B1.
   const myPool = keys.find(k => pools[k].teams.some(t => t.id === canonicalTeamId)) || null;
   const venueName = poolGames.find(g => g.topId === canonicalTeamId || g.botId === canonicalTeamId)?.fac || parsed.games[0]?.fac || '';
   const venue = await resolveTourneyMachineVenue(venueName, parsed.complexes, geocodeFn);

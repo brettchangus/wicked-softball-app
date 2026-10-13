@@ -6,11 +6,13 @@
 // Requires the ANTHROPIC_API_KEY env var (set in Netlify). Without it the bot
 // returns a friendly 503 so the page degrades gracefully.
 import Anthropic from '@anthropic-ai/sdk';
+import TournamentProjection from '../../assets/projections.js';
 import { getStore } from '@netlify/blobs';
 import {
   readStructure, readResults, readOverrides, readScopedArchive, resolveContext, mergeSnapshot,
 } from './lib/snapshot.js';
 import { verifyArchiveBundle } from './lib/archive.js';
+import { withSeedingRules } from './lib/seeding.js';
 import { seasonIsComplete } from './lib/context.js';
 import { MY_ID } from './lib/tournament.js';
 
@@ -392,6 +394,7 @@ export function buildBracketFrameContext(snap) {
   const brackets = Array.isArray(snap.brackets) ? snap.brackets : Object.values(snap.brackets || {});
   const framed = brackets.filter(b => Array.isArray(b.frame) && b.frame.length);
   if (!framed.length) return null;
+  const poolCount = Object.keys(snap.pools || {}).length;
 
   const isFinal = st => st === 'completed' || st === 'won' || st === 'lost';
   const liveOf = lvl => snap.bracketGames?.[lvl] || [];
@@ -413,15 +416,15 @@ export function buildBracketFrameContext(snap) {
     ? (gameRef > 0 ? `Winner of G${gameRef}` : `Loser of G${Math.abs(gameRef)}`)
     : (seed != null ? `Seed ${seed}` : 'TBD');
   // Resolve a slot → { team:{id,name,seed?} } (concrete) or { label } (seed/feed placeholder).
-  const resolveSlot = (b, games, seed, id, name, gameRef) => {
-    if (id) return { team: { id, name, seed: seed || null } };
+  const resolveSlot = (b, games, seed, id, name, gameRef, pool) => {
+    if (id) return { team: { id, name, seed: seed || null, pool } };
     const seeds = b.teams || [];
-    if (seed && seeds[seed - 1]) return { team: seeds[seed - 1] };
+    if (!pool && seed && seeds[seed - 1]) return { team: seeds[seed - 1] };
     if (gameRef != null) { const r = resultOf(games, gameRef); if (r) return { team: gameRef > 0 ? r.winner : r.loser }; }
-    return { label: String(name || '').trim() || slotLabel(seed, gameRef) };
+    return { label: String(name || '').trim() || (pool && seed ? `Pool ${pool} #${seed}` : slotLabel(seed, gameRef)) };
   };
   const slotName = s => s.team
-    ? `${s.team.seed ? `#${s.team.seed} ` : ''}${s.team.name || 'TBD'}${s.team.id === myId ? ' [US]' : ''}`
+    ? `${s.team.seed ? `${s.team.pool ? `Pool ${s.team.pool} ` : ''}#${s.team.seed} ` : ''}${s.team.name || 'TBD'}${s.team.id === myId ? ' [US]' : ''}`
     : (s.label || 'TBD');
 
   const out = ['=== BRACKET STRUCTURE (matchups + advancement; "G#" = game number) ==='];
@@ -438,8 +441,8 @@ export function buildBracketFrameContext(snap) {
       ((x.gameNo < 0) - (y.gameNo < 0)) || (Math.abs(x.gameNo) - Math.abs(y.gameNo)));
     for (const g of ordered) {
       const A = Math.abs(g.gameNo);
-      const a = resolveSlot(b, games, g.topSeed, g.topId, g.topName, g.topGame);
-      const c = resolveSlot(b, games, g.botSeed, g.botId, g.botName, g.botGame);
+      const a = resolveSlot(b, games, g.topSeed, g.topId, g.topName, g.topGame, TournamentProjection.entryPool(g, 'top', poolCount));
+      const c = resolveSlot(b, games, g.botSeed, g.botId, g.botName, g.botGame, TournamentProjection.entryPool(g, 'bot', poolCount));
       const lv = byNoLive[A];
       let score = '', winTag = '';
       if (lv && isFinal(lv.status) && lv.topScore != null && lv.botScore != null) {
@@ -473,8 +476,8 @@ export function buildBracketFrameContext(snap) {
     const { b, g } = pick;
     const games = liveOf(b.level);
     const A = Math.abs(g.gameNo);
-    const sa = resolveSlot(b, games, g.topSeed, g.topId, g.topName, g.topGame);
-    const sc = resolveSlot(b, games, g.botSeed, g.botId, g.botName, g.botGame);
+    const sa = resolveSlot(b, games, g.topSeed, g.topId, g.topName, g.topGame, TournamentProjection.entryPool(g, 'top', poolCount));
+    const sc = resolveSlot(b, games, g.botSeed, g.botId, g.botName, g.botGame, TournamentProjection.entryPool(g, 'bot', poolCount));
     const oppNow = sa.team?.id === myId ? sc : sa;
     // Estimate the final place for a terminal outcome (no downstream game). Grand final is exact.
     const estimatePlace = (frame, gameNo, isWin) => {
@@ -489,11 +492,11 @@ export function buildBracketFrameContext(snap) {
       if (!dg) return { terminal: true, place: estimatePlace(b.frame, A, ref > 0) };
       const wickedIsTop = dg.topGame === ref;
       const opp = wickedIsTop
-        ? resolveSlot(b, games, dg.botSeed, dg.botId, dg.botName, dg.botGame)
-        : resolveSlot(b, games, dg.topSeed, dg.topId, dg.topName, dg.topGame);
+        ? resolveSlot(b, games, dg.botSeed, dg.botId, dg.botName, dg.botGame, TournamentProjection.entryPool(dg, 'bot', poolCount))
+        : resolveSlot(b, games, dg.topSeed, dg.topId, dg.topName, dg.topGame, TournamentProjection.entryPool(dg, 'top', poolCount));
       return { gameNo: Math.abs(dg.gameNo), time: dg.time, opp };
     };
-    const fmtOpp = s => s.team ? `${s.team.seed ? `#${s.team.seed} ` : ''}${s.team.name}` : (s.label || 'TBD');
+    const fmtOpp = s => s.team ? `${s.team.seed ? `${s.team.pool ? `Pool ${s.team.pool} ` : ''}#${s.team.seed} ` : ''}${s.team.name}` : (s.label || 'TBD');
     const oline = (lbl, r) => r.terminal
       ? `  - If ⟦TEAM⟧ ${lbl}: its run ends → ${r.place}`
       : `  - If ⟦TEAM⟧ ${lbl}: advances to G${r.gameNo} vs ${fmtOpp(r.opp)}${r.time ? ` (${laDate(r.time)})` : ''}`;
@@ -516,8 +519,8 @@ export function buildBracketFrameContext(snap) {
       if (seen.has(da)) break;                         // guard against malformed cycles
       seen.add(da);
       const opp = dg.topGame === ref
-        ? resolveSlot(b, games, dg.botSeed, dg.botId, dg.botName, dg.botGame)
-        : resolveSlot(b, games, dg.topSeed, dg.topId, dg.topName, dg.topGame);
+        ? resolveSlot(b, games, dg.botSeed, dg.botId, dg.botName, dg.botGame, TournamentProjection.entryPool(dg, 'bot', poolCount))
+        : resolveSlot(b, games, dg.topSeed, dg.topId, dg.topName, dg.topGame, TournamentProjection.entryPool(dg, 'top', poolCount));
       chain.push({ gameNo: da, opp, time: dg.time });
       ref = da;                                        // assume Wicked wins this one too
     }
@@ -560,21 +563,24 @@ export function buildBracketProjection(snap) {
   }
   if (!teams.length || teams.every(t => t.w + t.l + t.t === 0)) return null;  // no meaningful results yet
 
-  teams.sort((a, b) =>
+  // The tournament's verified seeding rules (shared with the dashboard), else the legacy order.
+  const rules = snap.meta?.projectionRules?.verified === true ? snap.meta.projectionRules : null;
+  const rank = rows => rules ? TournamentProjection.rankByRules(rows, rules, snap) : [...rows].sort((a, b) =>
     (b.w - a.w) || ((a.ra || 0) - (b.ra || 0)) || ((b.rf || 0) - (a.rf || 0)) ||
     (((b.rf || 0) - (b.ra || 0)) - ((a.rf || 0) - (a.ra || 0))));
 
   const seedOrder = n => { if (n <= 1) return [1]; const p = seedOrder(n / 2); const o = []; for (const s of p) { o.push(s); o.push(n + 1 - s); } return o; };
   const nextPow2 = n => { let c = 1; while (c < n) c *= 2; return Math.max(c, 1); };
   const perDivision = brackets.some(b => b.division);
+  const sortedTeams = perDivision ? teams : rank(teams);
 
   const out = ['=== PROJECTED BRACKETS (based on current standings; the tournament sets the real bracket) ==='];
   let start = 0;
   for (const b of brackets) {
     // Which teams seed into this bracket?
     let bt;
-    if (perDivision) bt = teams.filter(t => t.level === b.division).slice(0, b.size);
-    else { bt = teams.slice(start, start + b.size); start += b.size; }
+    if (perDivision) bt = rank(teams.filter(t => t.level === b.division)).slice(0, b.size);
+    else { bt = sortedTeams.slice(start, start + b.size); start += b.size; }
     const N = bt.length;
     out.push(`-- ${b.label} bracket${b.division ? ` (${b.division} teams)` : ''} --`);
     if (N < 2) { out.push(`  ${N === 1 ? 'Single team — no bracket.' : 'Not enough teams yet.'}`); continue; }
@@ -635,222 +641,11 @@ function shortTeam(name) {
   return s || name || '';
 }
 
-// The concrete win/tiebreaker paths for Wicked to finish AHEAD of a single rival in the final
-// pool seeding. Ported verbatim from index.html's seedBattleLine() (pure math — same bounds the
-// dashboard shows). Returns an array of path phrases, or null when the pairwise result is decided.
-function seedBattleLine(me, r, remOf) {
-  const wNow = me.w || 0, wRem = remOf(me), wMax = wNow + wRem;
-  const rNow = r.w || 0, rRem = remOf(r), rMax = rNow + rRem;
-  const raW = me.ra || 0, raR = r.ra || 0;
-  if (rNow > wMax) return null;
-  if (rMax < wNow) return null;
-  const R = shortTeam(r.name);
-  const num = n => ['zero','one','two','three','four','five','six','seven','eight'][n] ?? String(n);
-  const paths = [];
-
-  const kMin = rMax - wMax + 1;
-  if (kMin <= 0) {
-    paths.push(wRem ? `⟦TEAM⟧ wins out` : `⟦TEAM⟧ is already ahead on wins`);
-  } else if (kMin <= rRem) {
-    const loseTxt = kMin === rRem
-      ? `loses out (${rRem} game${rRem === 1 ? '' : 's'})`
-      : `loses ${num(kMin)}${kMin > 1 ? '+' : ''} of its ${rRem} remaining`;
-    paths.push((wRem ? `⟦TEAM⟧ wins out and ` : ``) + `${R} ${loseTxt}`);
-  }
-
-  const tiePossible = wMax >= rNow && rMax >= wNow;
-  if (tiePossible) {
-    if (wRem === 0) {
-      const allowance = raW - raR;
-      if (allowance < 0) {
-        paths.push(`they tie on wins — ⟦TEAM⟧ already holds the runs-allowed tiebreaker (${raW} vs ${raR})`);
-      } else {
-        const span = rRem === 1 ? `its last game` : `its last ${rRem} games`;
-        paths.push(`${R} ties ⟦TEAM⟧ on wins but allows more than ${allowance} run${allowance === 1 ? '' : 's'} in ${span} (runs-allowed tiebreaker: ⟦TEAM⟧ ${raW}, ${R} ${raR})`);
-      }
-    } else {
-      paths.push(`they finish tied on wins and ⟦TEAM⟧ ends with fewer runs allowed (now ⟦TEAM⟧ ${raW}, ${R} ${raR})`);
-    }
-  }
-
-  return paths.length ? paths : null;
-}
-
-// Wicked's clinch / elimination outlook, ported from the dashboard's buildWickedScenarios()
-// (index.html) so the bot answers bracket-scenario questions from the SAME provably-correct
-// win-based bounds instead of doing the combinatorial math itself (which it gets wrong). Mirrors
-// buildBrackets' two seeding regimes the way buildBracketProjection does. Returns text, or null.
-//   Floor (worst): Wicked loses out AND every team that could match its win total finishes ahead.
-//   Ceiling (best): Wicked wins out AND only teams with strictly more wins stay ahead.
-// These bounds are sound regardless of run differential, so "clinched"/"eliminated" are always valid.
+// One pure engine feeds both the dashboard and the assistant.
 export function buildWickedScenarioContext(snap) {
-  if (snap.meta?.projectionUnsupported) return null;
-  const myId = snap.meta?.providerTeamId || MY_ID;
-  const brackets = Array.isArray(snap.brackets) ? snap.brackets : Object.values(snap.brackets || {});
-  if (!brackets.length) return null;
-  // Once the real bracket is posted, BRACKET RESULTS is authoritative — no more pool-seed scenarios.
-  const assigned = Object.values(snap.bracketGames || {}).some(g => (g || []).some(x => x.topId || x.botId));
-  if (assigned) return null;
-
-  // Roster joined to standings, each tagged with its pool (so we can count remaining games).
-  const teams = [];
-  const poolGames = {};
-  for (const k of (snap.poolOrder || Object.keys(snap.pools || {}))) {
-    const pool = (snap.pools || {})[k]; if (!pool) continue;
-    poolGames[k] = pool.games || [];
-    const standings = pool.standings || [];
-    for (const t of (pool.teams || [])) {
-      const s = standings.find(x => x.teamID === t.id || x._key === t.id) || {};
-      const [w = 0, l = 0, tie = 0] = (s.record || '').split('-').map(n => parseInt(n, 10) || 0);
-      teams.push({ id: t.id, name: t.name, level: t.level || null, poolKey: k,
-                   w, l, t: tie, rf: s.PF ?? 0, ra: s.PA ?? 0,
-                   officialRank: s.officialRank ?? null });
-    }
-  }
-  const me = teams.find(t => t.id === myId);
-  if (!me) return null;
-  if (teams.every(t => t.w + t.l + t.t === 0)) return null;   // no meaningful results yet
-
-  const totalGames = t => (poolGames[t.poolKey] || []).filter(g => g.hid === t.id || g.aid === t.id).length;
-  const remOf = t => Math.max(0, totalGames(t) - ((t.w || 0) + (t.l || 0) + (t.t || 0)));   // ties are played
-
-  // Regime: per-division ranks Wicked among its own level only; else global tiers over all teams.
-  const perDivision = brackets.some(b => b.division);
-  const myLevel = perDivision ? me.level : null;
-  const divBrackets = perDivision ? brackets.filter(b => b.division === myLevel) : [];
-  const useDiv = perDivision && !!myLevel && divBrackets.length > 0;
-  const ranking = (useDiv ? teams.filter(t => t.level === myLevel) : teams).slice();
-  ranking.sort((a, b) =>
-    (a.officialRank != null && b.officialRank != null ? a.officialRank - b.officialRank : 0) ||
-    (b.w - a.w) || ((a.ra || 0) - (b.ra || 0)) || ((b.rf || 0) - (a.rf || 0)) ||
-    (((b.rf || 0) - (b.ra || 0)) - ((a.rf || 0) - (a.ra || 0))));
-
-  // Bands = cumulative size windows over the relevant brackets (last band absorbs the rest).
-  const srcBrackets = useDiv ? divBrackets : brackets;
-  let acc = 0;
-  const bands = srcBrackets.map((b, i) => {
-    acc += b.size;
-    return { label: b.label, plain: b.label, max: i === srcBrackets.length - 1 ? Infinity : acc };
-  });
-  const bandOfL = seed => bands.find(b => seed <= b.max) || bands[bands.length - 1];
-  const topBand = bands[0], lastBand = bands[bands.length - 1];
-  const singleBracket = useDiv && bands.length === 1;
-  const nTeams = ranking.length;
-
-  const wWins = me.w || 0, wRem = remOf(me), wMax = wWins + wRem, wMin = wWins;
-  const total = totalGames(me), played = total - wRem;
-  const curSeed = ranking.findIndex(t => t.id === myId) + 1;
-  const anyGamesLeft = ranking.some(t => remOf(t) > 0);
-
-  // Win-only bounds are intentionally conservative while games remain. After pool play ends,
-  // the standings' full tiebreak ordering is final, so the range collapses to the actual seed.
-  let bestSeed = curSeed, worstSeed = curSeed;
-  if (anyGamesLeft) {
-    let aheadWorst = 0;   // floor: others win out, ties counted against Wicked
-    ranking.forEach(t => { if (t.id === myId) return; if (((t.w || 0) + remOf(t)) >= wMin) aheadWorst++; });
-    worstSeed = aheadWorst + 1;
-    let aheadBest = 0;    // ceiling: others lose out, only strictly-more-wins locked ahead
-    ranking.forEach(t => { if (t.id === myId) return; if ((t.w || 0) > wMax) aheadBest++; });
-    bestSeed = aheadBest + 1;
-  }
-
-  const curB = bandOfL(curSeed), worstB = bandOfL(worstSeed), bestB = bandOfL(bestSeed);
-  const locked = bestB.label === worstB.label;
-  const seedRange = bestSeed === worstSeed ? `#${bestSeed}` : `#${bestSeed}-#${worstSeed}`;
-  const nextPow2 = n => { let c = 1; while (c < n) c *= 2; return Math.max(c, 1); };
-
-  const out = ['=== ⟦TEAM_UP⟧ CLINCH / ELIMINATION (win-based bounds from current standings) ==='];
-  out.push(`Pool play: ${played}/${total} of ⟦TEAM⟧'s pool games complete, ${wRem} remaining.`);
-  if (singleBracket) {
-    out.push(`Destination locked: ${bands[0].plain} (the 10${myLevel} bracket). Projected ${seedRange} seed among the ${nTeams} 10${myLevel} teams.`);
-  } else if (locked) {
-    out.push(`Locked into ${worstB.label} — no remaining result can change ⟦TEAM⟧'s bracket.`);
-  } else {
-    out.push(`Projected bracket: ${curB.label} (currently seeded #${curSeed} of ${nTeams}${useDiv ? ` 10${myLevel}` : ''} teams; can still swing).`);
-  }
-  out.push(`Best possible seed #${bestSeed} (${singleBracket ? bands[0].plain : bestB.label}); worst possible seed #${worstSeed} (${singleBracket ? bands[0].plain : worstB.label}).`);
-
-  // Clinch / elimination claims (strongest true claim each way) — same logic as the dashboard.
-  const joinList = (a, conj) => a.length <= 1 ? (a[0] || '') : a.slice(0, -1).join(', ') + ` ${conj} ` + a[a.length - 1];
-  const lines = [];
-  if (singleBracket) {
-    const destSize = divBrackets[0].size;
-    const rawByes = Math.max(0, nextPow2(destSize) - destSize);
-    const byes = Math.min(rawByes, (destSize - rawByes) / 2);
-    if (byes === 1) {
-      if (worstSeed === 1) lines.push(`Clinched the #1 seed and a first-round bye in ${bands[0].plain}.`);
-      else if (bestSeed === 1) lines.push(`Still alive for the #1 seed and a first-round bye${anyGamesLeft ? '' : ' (final)'}.`);
-      else lines.push(`Cannot reach the #1 seed — no first-round bye.`);
-    } else {
-      if (worstSeed === 1) lines.push(`Clinched the #1 seed in ${bands[0].plain}.`);
-      else if (bestSeed === 1) lines.push(`Still alive for the #1 seed${anyGamesLeft ? '' : ' (final)'}.`);
-      if (byes > 1) {
-        if (worstSeed <= byes) lines.push(`Clinched a first-round bye — locked into a top-${byes} seed.`);
-        else if (bestSeed > byes) lines.push(`Cannot reach a first-round bye — can't get a top-${byes} seed.`);
-        else if (worstSeed !== 1) lines.push(`Still alive for a first-round bye (need a top-${byes} seed).`);
-      }
-    }
-    if (!lines.length) lines.push(`Seeding ${seedRange} in ${bands[0].plain}${anyGamesLeft ? '' : ' (final)'}.`);
-  } else {
-    if (worstB !== lastBand) {
-      if (worstB === topBand) lines.push(`Clinched ${topBand.label} — cannot fall out of the top ${topBand.max}.`);
-      else {
-        const lower = bands.slice(bands.indexOf(worstB) + 1).map(b => b.plain);
-        lines.push(`Clinched ${worstB.label} or better — cannot fall to ${joinList(lower, 'or')}.`);
-      }
-    }
-    if (bestB !== topBand) {
-      const higher = bands.slice(0, bands.indexOf(bestB)).map(b => b.plain);
-      lines.push(`Eliminated from ${joinList(higher, '&')} — best possible is ${bestB.label}.`);
-    }
-    if (!lines.length) lines.push(`Still alive for ${bestB.label}${anyGamesLeft ? '' : ' (final)'}.`);
-  }
-  for (const l of lines) out.push(`- ${l}`);
-
-  // Per-rival "what needs to happen" — only once Wicked has played AND the seed is still unsettled.
-  if (played > 0 && bestSeed !== worstSeed) {
-    const myIdx = curSeed - 1;
-    const order = [];
-    for (let d = 1; d < ranking.length; d++) {
-      if (myIdx - d >= 0) order.push(myIdx - d);
-      if (myIdx + d < ranking.length) order.push(myIdx + d);
-    }
-    const battle = [];
-    for (const idx of order) {
-      if (battle.length >= 4) break;
-      const r = ranking[idx];
-      const paths = seedBattleLine(me, r, remOf);
-      if (!paths) continue;
-      const verb = idx < myIdx ? 'Pass' : 'Hold off';
-      battle.push(`${verb} ${shortTeam(r.name)} (now #${idx + 1}): ${paths.join(' OR ')}.`);
-    }
-    if (battle.length) {
-      out.push('What needs to happen:');
-      for (const b of battle) out.push(`- ${b}`);
-    }
-  }
-
-  // Wicked's remaining/played pool games.
-  const myGames = (poolGames[me.poolKey] || []).filter(g => g.hid === myId || g.aid === myId);
-  if (myGames.length) {
-    out.push("⟦TEAM⟧'s pool games:");
-    for (const g of myGames) {
-      const opp = g.hid === myId ? g.an : g.hn;
-      const res = snap.results?.[g.key] || {};
-      // Manual overrides use "won"/"lost"; NorCal uses "completed". Both are final.
-      const fin = res.status === 'completed' || res.status === 'won' || res.status === 'lost';
-      const status = fin ? 'FINAL' : (res.status && res.status !== 'upcoming' ? 'LIVE' : '');
-      let tag = laDate(g.time);
-      if (res.topScore != null && res.botScore != null && status) {
-        const myScore = g.hid === myId ? res.topScore : res.botScore;
-        const opScore = g.hid === myId ? res.botScore : res.topScore;
-        const wl = status === 'FINAL' ? (myScore > opScore ? 'W' : myScore < opScore ? 'L' : 'T') : 'LIVE';
-        tag = `${wl} ${myScore}-${opScore} [${status}]`;
-      }
-      out.push(`  • vs ${shortTeam(opp)} — ${tag}`);
-    }
-  }
-  return out.join('\n');
+  if (!snap) return null;
+  const result = TournamentProjection.analyze(snap, { myId: snap.meta?.providerTeamId || MY_ID });
+  return '=== ⟦TEAM_UP⟧ SUNDAY OUTLOOK ===\n' + TournamentProjection.describe(result);
 }
 
 const SYSTEM_INSTRUCTIONS = `You are the friendly assistant for the ⟦TEAM⟧ youth softball team's dashboard. Parents and players ask you about schedules, tournament rules, past tournaments, and games ⟦TEAM⟧ played.
@@ -860,7 +655,7 @@ Guidelines:
 - "Us"/"we"/"our team" means ⟦TEAM⟧. Be aware of which games are theirs.
 - You MAY answer likely-opponent / seeding / bracket-path questions using the PROJECTED BRACKETS block. Frame it as an estimate based on current standings that can change as remaining pool games are played; the higher seed is the "most likely" team to fill a slot. Prefer actual results (BRACKET RESULTS) over projections when both exist.
 - When the BRACKET STRUCTURE block is present, the bracket is already posted (real teams placed) — use it (NOT projections) for "who do we play if we beat/lose to X", "where do we go if we win", and "what's our path" questions. Each game lists its two slots and where the winner and loser advance ("winner → G9, loser → G12"); follow those feeds to name the next opponent. For ⟦TEAM⟧'s immediate next game, the ⟦TEAM_UP⟧ NEXT GAME — WIN/LOSE OUTCOMES block already states both outcomes (next opponent or final place) — read it back verbatim; do not recompute it. For "and what if we win that game too / what if we keep winning / how far can we go" follow-ups, the ⟦TEAM_UP⟧ PROJECTED RUN block lists the whole winners' path step by step — read it back; do not trace the tree yourself. For any OTHER branch (e.g. "what if we LOSE then win the next one", or a non-⟦TEAM⟧ team's path), trace the BRACKET STRUCTURE feeds. A slot like "Winner of G3" means that game hasn't finished yet, so the opponent is still TBD — say so.
-- For "what bracket will we make / can we still reach X / are we eliminated / what do we need to win" questions, use the ⟦TEAM_UP⟧ CLINCH / ELIMINATION block. Those bounds and "what needs to happen" paths are already computed and mathematically valid — read them back; DO NOT recompute the seeding/clinch math yourself. State "clinched"/"eliminated" only when that block says so; otherwise present the floor/ceiling range and the relevant paths. If the question is about ⟦TEAM⟧'s bracket outlook and that block is absent, the bracket is either already set (see BRACKET RESULTS) or standings aren't posted yet — say so.
+- For highest possible finish, bracket eligibility, or what-needs-to-happen questions, use the ⟦TEAM_UP⟧ SUNDAY OUTLOOK block. Read its computed ceiling and path; do not recompute standings or bracket math. A conditional ceiling depends on unresolved tiebreaks or unverified rules and is NOT a confirmed achievable finish. Listed results are one example path, not individually necessary results. If the ceiling is not established, explain the supplied reason. Never infer Gold/Silver or overall numbered placement from game numbers. A highest possible finish is not a likely finish. Do not override this block with projected seeding or higher-seed predictions.
 - If the live context says SCHEDULE STATUS: NOT PUBLISHED YET, say the schedule hasn't been posted and share what IS known (dates, location, division, registered teams, rules). Never guess game times, fields, opponents, or pools.
 - Use the SEASON TOURNAMENT SCHEDULE for questions about other tournaments this season (what's next, when/where a tournament is).
 - All times are Pacific (the tournament's local time). Today's date is given in the live context.
@@ -943,6 +738,7 @@ export default async function handler(req) {
       snap = { meta:{ name:'No active tournament', schedulePending:true } };
     }
     if (!snap) return json({ error: "The schedule isn't loaded yet — check back once games are posted." }, 503);
+    snap = withSeedingRules(snap, archivedEvent || event);
     const servedFinalStats = servedSeason.finalStats || season.finalStats;
     if (seasonIsComplete(season) && servedFinalStats) {
       snap = {

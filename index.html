@@ -246,13 +246,18 @@ body.season-over #standingsCard{display:none!important;}
 .nxt-card-meta{font-size:11px;font-weight:700;color:#fff;margin-left:auto;letter-spacing:0;}
 .nxt-card-divider{border:none;border-top:1px solid rgba(255,255,255,.2);margin:0 16px 0;}
 .nxt-card-body{display:flex;align-items:stretch;gap:0;padding:14px 16px 14px;}
-.nxt-teams{flex:1;padding:0;display:flex;flex-direction:column;justify-content:center;gap:14px;min-width:160px;}
+.nxt-teams{flex:1;padding:0;display:flex;flex-direction:column;justify-content:center;gap:14px;min-width:0;padding-right:20px;}
 @media(max-width:480px){.nxt-teams{padding:0;}}
-.nxt-team-row{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:#fff;}
-.nxt-team-info{display:flex;flex-direction:column;gap:1px;}
+.nxt-team-row{display:grid;grid-template-columns:35px minmax(0,1fr) 48px 76px;align-items:center;gap:10px;font-size:15px;font-weight:700;color:#fff;}
+.nxt-record-heading{display:grid;grid-template-columns:minmax(0,1fr) 48px 76px;align-items:center;gap:10px;font-size:11px;font-weight:700;color:#fff;text-align:right;}
+.nxt-record-heading>span:first-child{text-align:left;}
+.nxt-record-heading img{width:22px;height:22px;object-fit:contain;vertical-align:middle;}
+.nxt-record{font-size:14px;font-weight:750;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums;color:#fff;}
+.nxt-gc-record a{color:#98efc9;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;text-decoration-color:rgba(255,255,255,.4);}
+@media(max-width:380px){.nxt-team-row{grid-template-columns:26px minmax(0,1fr) 48px 76px;gap:7px;font-size:14px;}.nxt-record-heading{gap:7px;}.nxt-team-row .nxt-logo,.nxt-team-row .nxt-badge{width:26px;height:26px;}}
+.nxt-team-info{display:flex;flex-direction:column;gap:1px;min-width:0;overflow-wrap:anywhere;}
 .nxt-team-name-line{display:block;}
 .nxt-team-info .team-location{font-size:11px;font-weight:400;color:rgba(255,255,255,.72);}
-.nxt-rec{font-size:11px;font-weight:400;opacity:.55;}
 .nxt-proj{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;opacity:.7;margin-left:5px;padding:1px 5px;border:1px solid rgba(255,255,255,.35);border-radius:4px;}
 .nxt-details{display:flex;flex-direction:column;justify-content:center;gap:14px;padding-left:20px;border-left:1px solid rgba(255,255,255,.2);min-width:130px;}
 @media(min-width:651px){.nxt-details{min-width:180px;}}
@@ -269,6 +274,21 @@ body.season-over #standingsCard{display:none!important;}
 .nxt-logo{width:35px;height:35px;object-fit:contain;flex-shrink:0;}
 .nxt-badge{width:35px;height:35px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:15px;font-family:"Playball",Georgia,serif;color:#fff;flex-shrink:0;}
 .nxt-link{color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:2px;text-decoration-color:rgba(255,255,255,.4);cursor:pointer;}
+/* Phone portrait: field + weather below the full-width team rows. */
+@media(max-width:600px) and (orientation:portrait){
+  .nxt-card-body{flex-direction:column;padding-top:12px;gap:10px;}
+  .nxt-details{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;min-width:0;padding-left:0;padding-top:10px;border-left:0;border-top:1px solid rgba(255,255,255,.2);}
+  .nxt-venue-block{min-width:0;}
+  .nxt-venue-block>div{min-width:0;}
+  .nxt-venue-pin{width:18px;font-size:18px;}
+  .nxt-venue-name{font-size:12px;overflow-wrap:anywhere;}
+  .nxt-weather-row{grid-column:2;grid-row:1;}
+  .nxt-weather-icon{font-size:25px;}
+  .nxt-weather-wind{white-space:nowrap;}
+  #snacksLink{grid-column:1/-1;margin-bottom:0;}
+  .nxt-teams{min-width:0;gap:16px;padding:0;}
+  .nxt-team-info{min-width:0;overflow-wrap:anywhere;}
+}
 .nxt-placement{display:flex;flex-direction:column;align-items:center;width:100%;padding:14px 16px 22px;text-align:center;}
 .nxt-pl-tourney{font-size:9px;font-weight:700;color:rgba(255,255,255,.55);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:18px;display:flex;align-items:center;gap:10px;width:100%;}
 .nxt-pl-tourney::before,.nxt-pl-tourney::after{content:'';flex:1;border-top:1px solid rgba(255,255,255,.22);}
@@ -454,9 +474,22 @@ a.t-row:hover{background:var(--border);border-radius:6px;}
 .modal-box{background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);max-width:560px;width:100%;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;position:relative;z-index:101;}
 .modal-head{background:var(--red);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:8px;}
 .modal-title{flex:1;font-size:15px;font-weight:700;}
+.team-modal-heading{flex:1;min-width:0;overflow-wrap:anywhere;}
+.team-modal-subtitle{display:flex;align-items:center;flex-wrap:wrap;gap:2px 18px;margin-top:3px;font-size:12px;font-weight:400;color:#ffe0e5;overflow:hidden;}
+.team-modal-subtitle[hidden],.team-modal-subtitle [hidden]{display:none;}
+.team-modal-pool{position:relative;white-space:nowrap;}
+.team-modal-subtitle.has-location .team-modal-pool::before{content:"";position:absolute;left:-9px;top:50%;height:13px;transform:translateY(-50%);border-left:1px solid rgba(255,255,255,.33);}
+.team-modal-links{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;margin-bottom:6px;}
+.team-modal-links a{position:relative;display:inline-flex;align-items:center;gap:6px;min-height:32px;font-size:12px;font-weight:500;color:var(--text);text-decoration:none;}
+.team-modal-links a+a{padding-left:12px;}
+.team-modal-links a+a::before{content:'';position:absolute;left:0;height:13px;border-left:1px solid var(--border);}
+.team-modal-links a:hover{color:var(--red);}
+.team-modal-links .external-arrow{color:var(--muted);text-decoration:none;}
+@media(pointer:coarse){.team-modal-links{row-gap:12px;}.team-modal-links a::after{content:'';position:absolute;inset:-6px 0;}}
 .modal-close{background:rgba(255,255,255,.2);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .modal-close:hover{background:rgba(255,255,255,.35);}
 .modal-body{padding:14px;overflow-y:auto;}
+#teamModal .modal-body{padding-top:8px;}
 .modal-overlay{display:none;}
 .modal-overlay.open{display:flex;}
 .history-modal-box{max-width:1040px;max-height:92vh;}
@@ -871,6 +904,17 @@ a.t-row:hover{background:var(--border);border-radius:6px;}
   .mg-ball.mg-flying.mg-ball-flame{animation:mgBallFlight var(--bdur,900ms) ease-out forwards !important;}
   .mg-ball.mg-hit.mg-ball-flame{animation:mgBallHit var(--hitdur,1100ms) linear forwards !important;}
 }
+/* Opening-tournament Sunday outlook. */
+.sunday-rally{max-width:460px;margin:6px auto;border:1px solid var(--border);border-radius:18px;overflow:hidden;text-align:center;background:var(--card);}
+.sunday-rally-main{padding:26px 22px 29px;background:radial-gradient(ellipse at 50% 120%,rgba(196,18,48,.22),transparent 65%),linear-gradient(145deg,#08070a,#100b0e 54%,#210008);border-bottom:3px solid var(--red);color:#fff;}
+.sunday-rally-label{font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#e8bfc6;}
+.sunday-rally h3{font-size:34px;font-weight:800;line-height:1.1;letter-spacing:-.8px;margin:23px 0 18px;}
+.sunday-rally-mantra{font-size:13px;font-weight:700;line-height:1.7;color:#f0d8dd;}
+.sunday-rally-goal{padding:21px 22px 23px;}
+.sunday-rally-goal strong{display:block;font-size:18px;margin-bottom:7px;color:var(--red);}
+.sunday-rally-goal p{font-size:14px;line-height:1.5;color:var(--muted);}
+.sunday-rally-goal .sunday-rally-note{font-size:12px;margin-top:13px;}
+@media(max-width:380px){.sunday-rally h3{font-size:30px;}}
 </style>
 </head>
 <body class="app-loading">
@@ -991,6 +1035,7 @@ a.t-row:hover{background:var(--border);border-radius:6px;}
     <hr class="nxt-card-divider">
     <div class="nxt-card-body">
       <div class="nxt-teams">
+        <div class="nxt-record-heading"><span>Team</span><span title="Tournament record">W–L</span><span><img src="/assets/gamechanger-logo.png" alt="GameChanger record" title="GameChanger season record"></span></div>
         <div class="nxt-team-row" id="nxtHome"></div>
         <div class="nxt-team-row" id="nxtOpp"></div>
       </div>
@@ -1101,7 +1146,13 @@ a.t-row:hover{background:var(--border);border-radius:6px;}
 <div class="modal-overlay" id="teamModal" onclick="closeModal(event)">
   <div class="modal-box">
     <div class="modal-head">
-      <span class="modal-title" id="modalTitle">Team Schedule</span>
+      <div class="team-modal-heading">
+        <div class="modal-title" id="modalTitle">Team Schedule</div>
+        <div class="team-modal-subtitle" id="modalSubtitle" hidden>
+          <span id="modalLocation" hidden></span>
+          <span class="team-modal-pool" id="modalPool" hidden></span>
+        </div>
+      </div>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <div class="modal-body" id="modalBody"></div>
@@ -1123,6 +1174,7 @@ a.t-row:hover{background:var(--border);border-radius:6px;}
   </div>
 </div>
 
+<script src="/assets/projections.js"></script>
 <script>
 // ============================================================
 // ALL DATA
@@ -1234,6 +1286,8 @@ let MY_ID = TOURNAMENT.myId;
 let SISTER_ID = TOURNAMENT.sisterId; // Optional sister team (disabled for non-NorCal providers)
 let ACTIVE_PROVIDER = 'norcal';
 let PROJECTION_UNSUPPORTED = false;
+let projectionSnapshot = null;
+let SEEDING_RULES = null;      // verified per-tournament pool seeding rules (meta.projectionRules), or null
 let ACTIVE_SOURCE_URL = '';
 let ACTIVE_SOURCE_TEAM_ID = '';
 let ACTIVE_EVENT_ID = '';
@@ -1290,7 +1344,18 @@ function gameChangerLinkHtml(teamId) {
     ? `<a class="gc-team-link" href="${appUrl}" target="blank" title="Open team in GameChanger app" aria-label="Open team in GameChanger app"><img src="/assets/gamechanger-logo.png" alt=""></a>` : '';
 }
 function nextTeamNameHtml(nameHtml, teamId, teamName) {
-  return `<span class="nxt-team-name-line">${nameHtml}${gameChangerLinkHtml(teamId)}</span>${gameChangerLocationHtml(teamId, teamName)}`;
+  return `<span class="nxt-team-name-line">${nameHtml}</span>${gameChangerLocationHtml(teamId, teamName)}`;
+}
+function nextTeamRowHtml(teamId, teamName, nameHtml = null, projected = false, record = teamRecords[teamId]) {
+  const name = nameHtml || (teamId
+    ? `<a class="nxt-link" onclick="showTeam(${jsArg(teamId)})">${displayTeamName(teamName)}</a>`
+    : historyEsc(teamName || 'TBD'));
+  const badge = teamId ? teamBadgeHTML(teamId, teamName) : '<div class="nxt-badge" style="background:#6b7280">?</div>';
+  const wl = projected ? '<span class="nxt-proj">proj.</span>'
+    : record ? `${record.w}–${record.l}${record.t ? `–${record.t}` : ''}` : '—';
+  return badge + `<div class="nxt-team-info">${nextTeamNameHtml(name, teamId, teamName)}</div>
+    <span class="nxt-record" aria-label="Tournament record">${wl}</span>
+    <span class="nxt-record nxt-gc-record">${teamId ? gameChangerRecordHtml(teamId) : '—'}</span>`;
 }
 function displayTeamName(name) {
   return historyEsc(splitRosterName(name).team);
@@ -1788,9 +1853,8 @@ function updateCountdown() {
     const firstDay = TOURNAMENT.dates?.[0];
     const myRec = teamRecords[MY_ID];
     document.getElementById('nxtHome').innerHTML =
-      `<div class="nxt-badge" style="background:#6b7280">?</div><div class="nxt-team-info"><span style="color:#fff;font-weight:700">Opponent TBD</span></div>`;
-    document.getElementById('nxtOpp').innerHTML = teamBadgeHTML(MY_ID, MY_NAME) +
-      `<div class="nxt-team-info">${nextTeamNameHtml(`<span style="color:#fff;font-weight:700">${displayTeamName(MY_NAME)}</span>`, MY_ID, MY_NAME)}${myRec ? `<span class="nxt-rec">(${myRec.w}–${myRec.l})</span>` : ''}</div>`;
+      nextTeamRowHtml(null, 'Opponent TBD');
+    document.getElementById('nxtOpp').innerHTML = nextTeamRowHtml(MY_ID, MY_NAME, null, false, myRec || { w:0, l:0 });
     const dayLabel = firstDay ? new Date(`${firstDay}T12:00:00`).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric' }) : '';
     document.getElementById('nxtDatetime').textContent = `${dayLabel ? dayLabel + '  ·  ' : ''}Schedule TBA`;
     setNextVenue(null);
@@ -1799,14 +1863,12 @@ function updateCountdown() {
   }
   const now = new Date();
   const upcomingGames = MY_GAMES.map(g=>({...g,dt:new Date(g.t)})).filter(g=>g.dt>now);
-  const myRec = teamRecords[MY_ID];
-  const recStr = r => r ? `<span class="nxt-rec">(${r.w}–${r.l}${r.t?`–${r.t}`:''})</span>` : '';
   // Render an opponent slot from a projectBracketSlot() result (used when the live feed hasn't posted
   // the real matchup yet): a projected team gets a "proj." tag, a decided feeder its record, and an
   // undecided feed / nothing falls back to a neutral "Winner of G#" / TBD chip.
   const projOppRow = opp => (opp && opp.team && opp.team.id)
-    ? teamBadgeHTML(opp.team.id, opp.team.name) + `<div class="nxt-team-info">${nextTeamNameHtml(`<a class="nxt-link" onclick="showTeam(${jsArg(opp.team.id)})">${displayTeamName(opp.team.name)}</a>`, opp.team.id, opp.team.name)}${opp.proj ? '<span class="nxt-proj">proj.</span>' : recStr(teamRecords[opp.team.id])}</div>`
-    : `<div class="nxt-badge" style="background:#6b7280">?</div><div class="nxt-team-info"><span style="color:#fff;font-weight:700">${historyEsc((opp && opp.label) || 'TBD')}</span></div>`;
+    ? nextTeamRowHtml(opp.team.id, opp.team.name, null, !!opp.proj)
+    : nextTeamRowHtml(null, (opp && opp.label) || 'TBD');
 
   if (!upcomingGames.length) {
     const nowDatePT = now.toLocaleDateString('en-CA', {timeZone:'America/Los_Angeles'});
@@ -1853,17 +1915,15 @@ function updateCountdown() {
       const wickedIsTop = g.topId === MY_ID;
       const oppId   = wickedIsTop ? g.botId   : g.topId;
       const oppName = (wickedIsTop ? g.botName : g.topName) || 'TBD';
-      const oppRec  = oppId ? teamRecords[oppId] : null;
       const bl = BRACKET_LABELS[bs.level];
       const wSeed = parseInt(wickedIsTop ? g.topSeed : g.botSeed) || 99;
       const oSeed = parseInt(wickedIsTop ? g.botSeed : g.topSeed) || 99;
       const wickedIsHome2 = wSeed <= oSeed;
-      const wickedRow2 = teamBadgeHTML(MY_ID,MY_NAME) +
-        `<div class="nxt-team-info">${nextTeamNameHtml(`<a class="nxt-link" onclick="showTeam(${jsArg(MY_ID)})">${displayTeamName(MY_NAME)}</a>`, MY_ID, MY_NAME)}${recStr(myRec)}</div>`;
+      const wickedRow2 = nextTeamRowHtml(MY_ID, MY_NAME);
       // Opponent slot: the confirmed assignment if TM has posted it, else project it from the frame +
       // seeding (a decided feeder resolves to the real team; an undecided one shows "Winner of G#").
       const oppRow2 = oppId
-        ? teamBadgeHTML(oppId, oppName) + `<div class="nxt-team-info">${nextTeamNameHtml(`<a class="nxt-link" onclick="showTeam(${jsArg(oppId)})">${displayTeamName(oppName)}</a>`, oppId, oppName)}${recStr(oppRec)}</div>`
+        ? nextTeamRowHtml(oppId, oppName)
         : projOppRow(projectBracketSlot(bs.level, parseInt(wickedIsTop ? g.botSeed : g.topSeed) || null, (wickedIsTop ? g.botGame : g.topGame) ?? null));
       document.getElementById('nxtHome').innerHTML = wickedIsHome2 ? oppRow2 : wickedRow2;
       document.getElementById('nxtOpp').innerHTML = wickedIsHome2 ? wickedRow2 : oppRow2;
@@ -1892,8 +1952,7 @@ function updateCountdown() {
     // card names the matchup instead of a bare TBD. The projected opponent carries a "proj." tag.
     const proj = wickedProjectedNextGame();
     if (proj && proj.opp && (proj.opp.team || proj.opp.label)) {
-      const wickedRow = teamBadgeHTML(MY_ID,MY_NAME) +
-        `<div class="nxt-team-info">${nextTeamNameHtml(`<a class="nxt-link" onclick="showTeam(${jsArg(MY_ID)})">${displayTeamName(MY_NAME)}</a>`, MY_ID, MY_NAME)}${recStr(myRec)}</div>`;
+      const wickedRow = nextTeamRowHtml(MY_ID, MY_NAME);
       const oppRow = projOppRow(proj.opp);
       const wickedIsHome = proj.wSeed <= (proj.oppSeed || 99);   // higher seed (lower #) listed second
       document.getElementById('nxtHome').innerHTML = wickedIsHome ? oppRow : wickedRow;
@@ -1910,9 +1969,8 @@ function updateCountdown() {
     // 5. Saturday after pool play (or Sunday before bracket data) → TBD (use projected slot if known)
     // Wicked is the home team (higher seed) → listed second
     document.getElementById('nxtHome').innerHTML =
-      `<div class="nxt-badge" style="background:#6b7280">?</div><div class="nxt-team-info"><span style="color:#fff;font-weight:700">TBD</span></div>`;
-    document.getElementById('nxtOpp').innerHTML = teamBadgeHTML(MY_ID,MY_NAME) +
-      `<div class="nxt-team-info">${nextTeamNameHtml(`<a class="nxt-link" onclick="showTeam(${jsArg(MY_ID)})">${displayTeamName(MY_NAME)}</a>`, MY_ID, MY_NAME)}${recStr(myRec)}</div>`;
+      nextTeamRowHtml(null, 'TBD');
+    document.getElementById('nxtOpp').innerHTML = nextTeamRowHtml(MY_ID, MY_NAME);
     const fbTs = wickedBracketFallback?.time, fbLbl = wickedBracketFallback?.label;
     document.getElementById('nxtDatetime').textContent = fbTs
       ? `${BRACKET_DATE_LABEL}  ·  ${fbTs}  ·  ${fbLbl}`
@@ -1930,11 +1988,8 @@ function updateCountdown() {
   const opp = wickedIsHome ? next.an : next.hn;
   const dt = new Date(next.t);
   const oppId = wickedIsHome ? next.aid : next.hid;
-  const oppRec = teamRecords[oppId];
-  const wickedRow = teamBadgeHTML(MY_ID,MY_NAME) +
-    `<div class="nxt-team-info">${nextTeamNameHtml(`<a class="nxt-link" onclick="showTeam(${jsArg(MY_ID)})">${displayTeamName(MY_NAME)}</a>`, MY_ID, MY_NAME)}${recStr(myRec)}</div>`;
-  const oppRow = teamBadgeHTML(oppId, opp) +
-    `<div class="nxt-team-info">${nextTeamNameHtml(`<a class="nxt-link" onclick="showTeam(${jsArg(oppId)})">${displayTeamName(opp)}</a>`, oppId, opp)}${recStr(oppRec)}</div>`;
+  const wickedRow = nextTeamRowHtml(MY_ID, MY_NAME);
+  const oppRow = nextTeamRowHtml(oppId, opp);
   // Away team (lower seed / visitor) listed first, home team second
   document.getElementById('nxtHome').innerHTML = wickedIsHome ? oppRow : wickedRow;
   document.getElementById('nxtOpp').innerHTML = wickedIsHome ? wickedRow : oppRow;
@@ -2008,23 +2063,32 @@ function computeBracketRecord(teamId) {
 function sortStandingsTeams(teams, rankField = 'officialRank', preferMine = false) {
   const ranked = teams.every(t => t[rankField] != null && Number.isFinite(Number(t[rankField])))
     && new Set(teams.map(t => Number(t[rankField]))).size === teams.length;
-  const allTied = teams.every(t => (t.w || 0) === (teams[0]?.w || 0)
-    && (t.l || 0) === (teams[0]?.l || 0) && (t.t || 0) === (teams[0]?.t || 0)
-    && (t.rf || 0) === (teams[0]?.rf || 0) && (t.ra || 0) === (teams[0]?.ra || 0));
-  const sorted = [...teams].sort((a,b) => {
-    if (allTied && !!a.me !== !!b.me) return a.me ? -1 : 1;
-    if (ranked) return Number(a[rankField]) - Number(b[rankField]);
-    return (b.w || 0) - (a.w || 0) || (a.ra || 0) - (b.ra || 0)
-      || (b.rf || 0) - (a.rf || 0) || String(a.id).localeCompare(String(b.id));
-  });
-  if (!preferMine) return sorted;
-  const me = sorted.find(t => t.me);
-  if (!me) return sorted;
-  const betterRecord = t => (t.w || 0) > (me.w || 0)
-    || ((t.w || 0) === (me.w || 0) && ((t.l || 0) < (me.l || 0)
-      || ((t.l || 0) === (me.l || 0) && (t.t || 0) > (me.t || 0))));
-  return [...sorted.filter(t => t !== me && betterRecord(t)), me,
-    ...sorted.filter(t => t !== me && !betterRecord(t))];
+  // A complete posted seed order is decisive. Tracked-team preference applies only to unresolved ties.
+  if (ranked) return [...teams].sort((a, b) => Number(a[rankField]) - Number(b[rankField]));
+  let groups;
+  if (SEEDING_RULES && typeof TournamentProjection !== 'undefined') groups = TournamentProjection.rankGroupsByRules(teams, SEEDING_RULES, projectionSnapshot);
+  else {
+    const compare = (a, b) => (b.w || 0) - (a.w || 0) || (a.ra || 0) - (b.ra || 0) || (b.rf || 0) - (a.rf || 0);
+    const sorted = [...teams].sort((a, b) => compare(a, b) || String(a.id).localeCompare(String(b.id)));
+    groups = [];
+    for (const t of sorted) {
+      const last = groups.at(-1);
+      if (last && compare(last[0], t) === 0) last.push(t); else groups.push([t]);
+    }
+  }
+  return groups.flatMap(group => preferMine
+    ? [...group.filter(t => t.me), ...group.filter(t => !t.me)] : group);
+}
+
+// A sister division cannot enlarge a two-team record tie in this division.
+function sortBracketTeams(teams) {
+  if (!BRACKETS.some(b => b.division)) return sortStandingsTeams(teams);
+  const divisions = new Map();
+  for (const t of teams) {
+    if (!divisions.has(t.level)) divisions.set(t.level, []);
+    divisions.get(t.level).push(t);
+  }
+  return [...divisions.values()].flatMap(rows => sortStandingsTeams(rows));
 }
 
 function buildAllStandings(liveData) {
@@ -2091,7 +2155,7 @@ function buildAllStandings(liveData) {
   // release (bracketGameData empty) fall back to projectBracket — a division-aware projection
   // that seeds each skill level's bracket from that level only (so a low-global-rank B team
   // still shows its B bracket), or global size-bands for single-level events.
-  const allTeams = sortStandingsTeams(Object.values(poolTeams).flat());
+  const allTeams = sortBracketTeams(Object.values(poolTeams).flat());
   const actualLevel = {};                       // teamId → released bracket level (e.g. 'gold')
   Object.entries(bracketGameData).forEach(([level, games]) =>
     (games || []).forEach(g => { if (g.topId) actualLevel[g.topId] = level;
@@ -2239,13 +2303,13 @@ function bracketGameScore(level, seedA, seedB) {
 // BRACKET PREDICTION
 // ============================================================
 // score (optional) = { val, cls } → shown right-aligned after the team name.
-function btSlot(team, globalSeed, score) {
+function btSlot(team, globalSeed, score, pool = null) {
   if(!team) return `<div class="bt tbd">TBD</div>`;
   const isMe = team.id === MY_ID;
   const isSister = team.id === SISTER_ID;
   const prefix = isMe ? '⭐ ' : isSister ? '🟣 ' : '';
   const cls = isMe ? ' me' : '';
-  const seedLabel = globalSeed != null ? `#${globalSeed} ` : '';
+  const seedLabel = globalSeed != null ? `${pool ? `Pool ${historyEsc(pool)} ` : ''}#${globalSeed} ` : '';
   const nameEl = team.id
     ? `<button class="team-link" style="font-size:inherit" onclick="showTeam(${jsArg(team.id)})">${prefix}${seedLabel}${historyEsc(team.name)}</button>${gameChangerLinkHtml(team.id)}`
     : `${prefix}${seedLabel}${historyEsc(team.name)}`;
@@ -2408,6 +2472,13 @@ function fmtFrameTime(iso) {
 // bracket's seed-ordered team list (index 0 = local #1 seed; may hold nulls for unknown slots);
 // `offset` maps local→global seed for display + live lookup. Live winners/scores overlay via the
 // same seed-keyed helpers as renderSEBracket. Returns false (→ caller falls back) if no frame.
+// Published bracket slots remain usable when the optional projection script is unavailable.
+function bracketEntryPool(game, side) {
+  if (POOL_KEYS.length <= 1) return null;
+  const poolLabel = String(game[side + 'Name'] || '').match(/(?:Pool|Bracket)\s+([A-Z0-9]+)\s+\d+.*Place/i);
+  return game[side + 'Pool'] || poolLabel?.[1]?.toUpperCase() || null;
+}
+
 function renderFrameBracket(panelId, frame, teams, offset, level) {
   const panel = document.getElementById(panelId);
   if (!panel) return false;
@@ -2434,7 +2505,7 @@ function renderFrameBracket(panelId, frame, teams, offset, level) {
   const slotHTML = (p, score) => {
     if (!p) return `<div class="bt tbd">TBD</div>`;
     if (p.kind === 'seed')        return btSlot(teams[p.seed - 1], g(p.seed), score);
-    if (p.kind === 'winnerKnown') return btSlot(p.team, p.globalSeed, score);
+    if (p.kind === 'winnerKnown') return btSlot(p.team, p.globalSeed, score, p.pool);
     if (p.kind === 'feed') return `<div class="bt tbd" style="font-style:italic">${historyEsc(p.label)}</div>`;
     return `<div class="bt tbd" style="font-style:italic">${p.srcLabel ? `Winner of ${p.srcLabel}` : 'Winner of prior game'}</div>`;
   };
@@ -2481,18 +2552,21 @@ function renderFrameBracket(panelId, frame, teams, offset, level) {
         return { kind:'winnerKnown', team:bracketTeam(team.id, team.name),
                  globalSeed:localSeed ? g(localSeed) : null };
       };
-      const part = (seed, id, name, gameRef) => id
-        ? { kind:'winnerKnown', team:bracketTeam(id, name), globalSeed:null }
+      const part = (seed, id, name, gameRef, pool) => id
+        ? { kind:'winnerKnown', team:bracketTeam(id, name), globalSeed:pool && seed ? Number(seed) : null, pool }
+        : pool && seed != null ? { kind:'feed', label:String(name || '').trim() || `Pool ${pool} #${seed}` }
         : seed != null ? { kind: 'seed', seed: Number(seed) }
         : gameRef != null ? (resultParticipant(gameRef) || (gameRef > 0
           ? (winnerOf.get(gameRef) || { kind: 'feed', label:`Winner of G${gameRef}` })
           : { kind: 'feed', label:`Loser of G${Math.abs(gameRef)}` }))
         : String(name || '').trim() ? { kind:'feed', label:String(name).trim() }
         : null;
-      const a = part(fg.topSeed, fg.topId, fg.topName, fg.topGame), b = part(fg.botSeed, fg.botId, fg.botName, fg.botGame);
+      const a = part(fg.topSeed, fg.topId, fg.topName, fg.topGame, bracketEntryPool(fg, 'top')),
+        b = part(fg.botSeed, fg.botId, fg.botName, fg.botGame, bracketEntryPool(fg, 'bot'));
       const seedA = localSeedOf(a), seedB = localSeedOf(b);
       games.push({ a, b, gameNo:fg.gameNo, seedA, seedB, time: fg.time, fac: fg.fac, facCity: fg.facCity, field: fg.field });
-      const real = level ? bracketWinner(level, seedA, seedB, offset) : null;
+      const result = level ? bracketResultOf(level, fg.gameNo) : null;
+      const real = result ? { team:bracketTeam(result.winner.id, result.winner.name), globalSeed:null } : null;
       const srcLabel = (a && a.kind === 'seed' && b && b.kind === 'seed') ? `${a.seed}v${b.seed}` : null;
       winnerOf.set(fg.gameNo, real
         ? { kind: 'winnerKnown', team: real.team, globalSeed: real.globalSeed }
@@ -2510,7 +2584,8 @@ function renderFrameBracket(panelId, frame, teams, offset, level) {
   };
   const colsHTML = columns.map((games, ci) => {
     const boxes = games.map(gm => {
-      const sc = bracketGameScore(level, gm.seedA, gm.seedB);
+      const live = (bracketGameData[level] || []).find(g => Math.abs(g.gameNo) === Math.abs(gm.gameNo));
+      const sc = live ? { ...live, done:['completed','won','lost'].includes(live.status), live:_normStatus(live.status) === 'live' } : null;
       const pm = pathMeta(gm.gameNo);
       const pathLabel = pm.label ? `<div class="bkt-path-label">${historyEsc(pm.label)}</div>` : '';
       const time = `${placementRoots.length ? `G${Math.abs(gm.gameNo)} · ` : ''}${fmtFrameTime(gm.time)}`;
@@ -2567,22 +2642,23 @@ function renderPlacementBracket(panelId, b, teams, offset) {
   const byNo = new Map(frame.map(g => [Math.abs(g.gameNo), g]));
   const liveByNo = new Map((bracketGameData[b.level] || []).filter(g => g.gameNo != null).map(g => [Math.abs(g.gameNo), g]));
   const globalSeed = team => { const i = teams.findIndex(t => t && team && t.id === team.id); return i < 0 ? null : i + offset; };
-  const resolve = (seed, id, name, ref) => {
-    if (id) return { team:bracketTeam(id, name), seed:seed ? Number(seed) + offset - 1 : null };
-    if (seed != null && teams[Number(seed) - 1]) return { team:teams[Number(seed) - 1], seed:Number(seed) + offset - 1 };
+  const resolve = (seed, id, name, ref, pool) => {
+    if (id) return { team:bracketTeam(id, name), seed:seed ? Number(seed) + (pool ? 0 : offset - 1) : null, pool };
+    if (!pool && seed != null && teams[Number(seed) - 1]) return { team:teams[Number(seed) - 1], seed:Number(seed) + offset - 1 };
     if (ref != null) {
       const result = bracketResultOf(b.level, ref);
       if (result) { const team = ref > 0 ? result.winner : result.loser; return { team:bracketTeam(team.id, team.name), seed:globalSeed(team) }; }
       return { label:ref > 0 ? `Winner of G${ref}` : `Loser of G${Math.abs(ref)}` };
     }
-    return { label:String(name || '').trim() || 'TBD' };
+    return { label:String(name || '').trim() || (pool && seed ? `Pool ${pool} #${seed}` : 'TBD') };
   };
   const slot = (s, val, cls) => {
-    if (s.team) return btSlot(s.team, s.seed, val != null ? { val, cls } : null);
+    if (s.team) return btSlot(s.team, s.seed, val != null ? { val, cls } : null, s.pool);
     return `<div class="bt tbd"><span class="bt-name">${historyEsc(s.label)}</span>${val != null ? `<span class="bt-score ${cls}">${val}</span>` : ''}</div>`;
   };
   const gameHTML = g => {
-    const a = resolve(g.topSeed, g.topId, g.topName, g.topGame), c = resolve(g.botSeed, g.botId, g.botName, g.botGame);
+    const a = resolve(g.topSeed, g.topId, g.topName, g.topGame, bracketEntryPool(g, 'top')),
+      c = resolve(g.botSeed, g.botId, g.botName, g.botGame, bracketEntryPool(g, 'bot'));
     const lv = liveByNo.get(Math.abs(g.gameNo));
     let av = null, cv = null, ac = '', cc = '';
     if (lv && (lv.topScore != null || lv.botScore != null)) {
@@ -2807,6 +2883,7 @@ function buildBrackets(allTeams) {
   // feeds), so render each bracket straight from its frame instead of seeding from pool standings.
   if (BRACKET_ONLY) {
     BRACKETS.forEach(b => renderBracketOnly(`bktPanel-${b.level}`, b));
+    buildWickedScenarios();
     return;
   }
   // allTeams already sorted globally. Two seeding regimes (set by buildStructure's discovery):
@@ -2819,7 +2896,7 @@ function buildBrackets(allTeams) {
   // list (live-assigned where known, else our projection) — both renderers map seed#→team from it.
   BRACKET_SEEDED = {};
   const draw = (b, teams, offset) => {
-    const seeded = PROJECTION_UNSUPPORTED ? [] : realOrPredicted(b.level, teams);
+    const seeded = PROJECTION_UNSUPPORTED || typeof TournamentProjection === 'undefined' ? [] : realOrPredicted(b.level, teams);
     BRACKET_SEEDED[b.level] = { teams: seeded, offset };
     if (b.placementGames && renderPlacementBracket(`bktPanel-${b.level}`, b, seeded, offset)) return;
     if (!(b.frame && renderFrameBracket(`bktPanel-${b.level}`, b.frame, seeded, offset, b.level)))
@@ -2841,320 +2918,43 @@ function buildBrackets(allTeams) {
   buildWickedScenarios(allTeams);
 }
 
-// ============================================================
-// CLINCH / ELIMINATION SCENARIOS (live, win-based bounds)
-// ============================================================
-// Two seeding regimes, mirroring buildBrackets:
-//  • per-division (some bracket carries a `division`): Wicked's bracket is fixed by its skill
-//    level, so it's ranked ONLY against same-level teams and the bands are that level's
-//    bracket(s). With one bracket per level the destination is locked and the output is the
-//    projected SEED (and first-round bye) within it; with several, the between-band
-//    clinch/elim logic runs over the division-local bands.
-//  • global tiers (no `division`): the legacy cumulative size-bands over the single combined
-//    ranking (e.g. Premier 1–6 / Gold 7–12 / Silver 13–18 / Bronze 19+).
-// Seeding tiebreak (live): wins → runs allowed → runs scored → run diff.
-// Floor (worst case): Wicked loses every remaining game AND every other team wins out;
-//   any team that could match or beat Wicked's win total is counted ahead (ties count
-//   against Wicked). => the lowest seed Wicked can possibly fall to.
-// Ceiling (best case): Wicked wins out AND every other team loses out; only teams with
-//   strictly more wins than Wicked's max are locked ahead (Wicked optimistically wins
-//   any tiebreak). => the highest seed Wicked can possibly reach.
-// These bounds are sound regardless of run differential, so "clinched" / "eliminated"
-// claims are always mathematically valid.
-// Spell out, in plain English, the concrete paths for Wicked to finish AHEAD of a single
-// rival `r` in the final pool seeding — the per-rival detail behind the band-level clinch/elim
-// lines. Reasons about FINAL win totals (pool play completes for everyone) plus the live
-// tiebreakers (wins → runs allowed → runs scored). Returns an array of path phrases (the caller
-// joins them with "or"), or null when the pairwise result is already decided either way.
-//   wNow/wRem/wMax  = Wicked's current wins / remaining games / max possible wins (wins out)
-//   rNow/rRem/rMax  = rival's equivalents;  raW/raR = current runs allowed (fewer = better)
-// kMin = the fewest remaining games the rival must LOSE for Wicked (winning out) to pass it on
-// wins; when their win ceilings are equal (kMin === 1 path) the rival winning out instead forces
-// a wins tie, which the runs-allowed tiebreaker then settles — that's the "or allows > N runs"
-// branch. The RA math is exact when Wicked has finished its pool games (raW is locked); while
-// Wicked still has games left it's stated qualitatively (both teams' remaining runs still move it).
-function seedBattleLine(me, r, remOf) {
-  const wNow = me.w || 0, wRem = remOf(me), wMax = wNow + wRem;
-  const rNow = r.w || 0, rRem = remOf(r), rMax = rNow + rRem;
-  const raW = me.ra || 0, raR = r.ra || 0;
-  if (rNow > wMax) return null;   // rival already has more wins than Wicked can reach — out of reach above
-  if (rMax < wNow) return null;   // rival can't reach Wicked's current wins — already locked below Wicked
-  const R = shortTeam(r.name);
-  const num = n => ['zero','one','two','three','four','five','six','seven','eight'][n] ?? String(n);
-  const paths = [];
-
-  // ---- win path: Wicked finishes with strictly more wins ----
-  const kMin = rMax - wMax + 1;                 // games the rival must lose (assuming Wicked wins out)
-  if (kMin <= 0) {
-    paths.push(wRem ? `Our team wins out` : `Our team is already ahead on wins`);
-  } else if (kMin <= rRem) {
-    const loseTxt = kMin === rRem
-      ? `loses out (${rRem} game${rRem === 1 ? '' : 's'})`
-      : `loses ${num(kMin)}${kMin > 1 ? '+' : ''} of its ${rRem} remaining`;
-    paths.push((wRem ? `Our team wins out and ` : ``) + `${R} ${loseTxt}`);
+// Shared snapshot-based projection logic also feeds the chat assistant.
+function buildWickedScenarios() {
+  const el = document.getElementById('projectionOutlook') || document.getElementById('bktPanel-wicked');
+  if (!el) return;
+  if (typeof TournamentProjection === 'undefined') {
+    el.textContent = 'Projection tools could not load. Refresh to try again.';
+    return;
   }
-
-  // ---- tie path: finish level on wins, settled by the runs-allowed tiebreaker ----
-  const tiePossible = wMax >= rNow && rMax >= wNow;   // their final win ranges overlap
-  if (tiePossible) {
-    if (wRem === 0) {
-      const allowance = raW - raR;                    // runs R can still allow and stay ahead of Wicked
-      if (allowance < 0) {
-        paths.push(`they tie on wins — our team already holds the runs-allowed tiebreaker (${raW} vs ${raR})`);
-      } else {
-        const span = rRem === 1 ? `its last game` : `its last ${rRem} games`;
-        paths.push(`${R} ties our team on wins but allows more than ${allowance} run${allowance === 1 ? '' : 's'} in ${span} (runs-allowed tiebreaker: our team ${raW}, ${R} ${raR})`);
-      }
-    } else {
-      paths.push(`they finish tied on wins and our team ends with fewer runs allowed (now our team ${raW}, ${R} ${raR})`);
-    }
-  }
-
-  return paths.length ? paths : null;
-}
-
-function buildWickedScenarios(allTeams) {
-  const el = document.getElementById('bktPanel-wicked');
-  if(!el) return;
-  if (PROJECTION_UNSUPPORTED) { el.textContent = 'Gold and Silver games use each team\'s final place in Pool A or Pool B. The bracket shows those pool-place slots now and will name the teams when the provider posts the assignments.'; return; }
-  const me = allTeams.find(t => t.id === MY_ID);
-  if(!me) { el.innerHTML = '<div class="note">Waiting for standings…</div>'; return; }
-
-  // Regime switch: per-division ranks Wicked among its own level only, with that level's
-  // bracket(s) as the bands; otherwise the global BANDS over all teams. (See comment above.)
-  const perDivision = BRACKETS.some(b => b.division);
-  const myLevel = perDivision ? me.level : null;
-  const divBrackets = perDivision ? BRACKETS.filter(b => b.division === myLevel) : [];
-  const useDiv = perDivision && !!myLevel && divBrackets.length > 0;
-  const teamsForRanking = useDiv ? allTeams.filter(t => t.level === myLevel) : allTeams;
-  let bands;
-  if (useDiv) {
-    let acc = 0;
-    bands = divBrackets.map((b, i) => {
-      const start = acc + 1; acc += b.size;
-      return { level:b.level, label:`${trophyIcon(bracketTrophyPlace(b))} ${historyEsc(b.label)}`, plain:historyEsc(b.label), cls:b.cls,
-               start, max: i === divBrackets.length - 1 ? Infinity : acc };
-    });
-  } else {
-    bands = BANDS;
-  }
-  const bandOfL = seed => bands.find(b => seed <= b.max) || bands[bands.length - 1];
-  const topBand = bands[0], lastBand = bands[bands.length - 1];
-  const singleBracket = useDiv && bands.length === 1;
-  // One posted bracket that every team funnels into (no per-division seeding). Pool results decide
-  // seeding but not the destination, so project the SEED only. `multiFinal` marks the variant that
-  // ends in multiple named finals (e.g. Gold + Silver): still one bracket, but Sunday wins/losses —
-  // not pool placement — decide which final a team reaches, which the wording calls out.
-  const placementBracket = !useDiv && BRACKETS.length === 1;
-  const multiFinal = placementBracket && Object.keys(BRACKETS[0].placementGames || {}).length > 1;
-  const seedOnly = singleBracket || placementBracket;
-  const nTeams = teamsForRanking.length;
-
-  // total pool games & remaining games for any team, derived from its pool schedule
-  const totalGames = t => (POOLS[t.poolKey]?.schedule || []).filter(g => g.hid===t.id || g.aid===t.id).length;
-  const remOf = t => Math.max(0, totalGames(t) - ((t.w||0) + (t.l||0) + (t.t||0))); // ties are played games
-
-  const wWins = me.w || 0;
-  const wRem  = remOf(me);
-  const wMax  = wWins + wRem;      // wins out
-  const wMin  = wWins;             // loses out
-  const total = totalGames(me);
-  const played = total - wRem;
-
-  // live current seed (teamsForRanking already sorted with runs-allowed tiebreaks)
-  const curSeed = teamsForRanking.findIndex(t => t.id === MY_ID) + 1;
-  const anyGamesLeft = teamsForRanking.some(t => remOf(t) > 0);
-
-  // While games remain, use conservative win-only bounds: ties count against Wicked for the
-  // floor and in Wicked's favor for the ceiling. Once pool play is complete, the published
-  // standings/tiebreakers are final, so both bounds must collapse to the actual sorted seed.
-  let bestSeed = curSeed, worstSeed = curSeed;
-  if (anyGamesLeft) {
-    let aheadWorst = 0;
-    teamsForRanking.forEach(t => { if(t.id===MY_ID) return; if(((t.w||0) + remOf(t)) >= wMin) aheadWorst++; });
-    worstSeed = aheadWorst + 1;
-
-    let aheadBest = 0;
-    teamsForRanking.forEach(t => { if(t.id===MY_ID) return; if((t.w||0) > wMax) aheadBest++; });
-    bestSeed = aheadBest + 1;
-  }
-
-  const curB   = bandOfL(curSeed);
-  const worstB = bandOfL(worstSeed);
-  const bestB  = bandOfL(bestSeed);
-  const locked = bestB.label === worstB.label;
-  const seedRange = bestSeed === worstSeed ? `#${bestSeed}` : `#${bestSeed}–#${worstSeed}`;
-
-  // ---- headline ----
-  let headline, headSub;
-  if(placementBracket) {
-    headline = anyGamesLeft ? `Projected seed: ${seedRange}` : `Final pool seed: #${curSeed}`;
-    headSub  = anyGamesLeft
-      ? (multiFinal
-        ? `All ${nTeams} teams enter the same Sunday bracket. Game results—not pool placement alone—decide whether our team advances on the Gold or Silver path.`
-        : `All ${nTeams} teams enter the same Sunday bracket; pool results set the seeding.`)
-      : `Pool play complete — our team entered the ${bands[0].plain} bracket as the #${curSeed} seed.`;
-  } else if(singleBracket) {
-    // Destination is fixed (one bracket for Wicked's level) — the question is the seed.
-    headline = `🔒 Locked into ${bands[0].label}`;
-    headSub  = `Your 10${myLevel} bracket. ${anyGamesLeft ? `Projected ${seedRange}` : `Final #${curSeed}`} seed among the ${nTeams} 10${myLevel} teams.`;
-  } else if(locked) {
-    headline = `🔒 Locked into ${worstB.label}`;
-    headSub  = anyGamesLeft ? `No remaining result can change our team's bracket.` : `Pool play complete — bracket is final.`;
-  } else {
-    headline = `Projected: ${curB.label}`;
-    headSub  = `Currently seeded #${curSeed} of ${nTeams}${useDiv ? ` 10${myLevel}` : ''} teams · can still swing between brackets (see below).`;
-  }
-
-  // ---- clinch / elimination statements (strongest true claim each way) ----
-  // Generalized over any number of bands. joinList → "A", "A & B", "A, B & C".
-  const joinList = (a, conj) => a.length <= 1 ? (a[0] || '')
-    : a.slice(0, -1).join(', ') + ` ${conj} ` + a[a.length - 1];
-  const lines = [];
-  if(placementBracket) {
-    lines.push([anyGamesLeft ? '🎯' : '✅', anyGamesLeft
-      ? (multiFinal
-        ? `Current projection: #${curSeed} seed; possible range ${seedRange}. Gold and Silver are Sunday result paths, not separate brackets assigned after pool play.`
-        : `Current projection: #${curSeed} seed; possible range ${seedRange}. Every team plays into one bracket — seeding follows pool results.`)
-      : `Final pool seed: #${curSeed}. The completed bracket is now the source of truth.`, anyGamesLeft ? 'tlive' : 'tw']);
-  } else if(singleBracket) {
-    // Single destination bracket → seed-focused claims (#1 seed + first-round bye), not
-    // between-bracket clinch/elim. A first-round bye only counts when the bye seed meets a
-    // round-1 WINNER next round; with an odd field the leftover bye seeds just play each other
-    // (e.g. a 5-team bracket: only #1 truly byes — #2 v #3 is just their first game), so the
-    // real bye count is min(nextPow2(size) - size, round-1 games), NOT nextPow2(size) - size.
-    const destSize = divBrackets[0].size;
-    const rawByes  = Math.max(0, nextPow2(destSize) - destSize);
-    const byes     = Math.min(rawByes, (destSize - rawByes) / 2);
-    if(byes === 1) {
-      // The lone bye belongs to the #1 seed — fold it into the #1-seed claim.
-      if(worstSeed === 1)      lines.push(['✅', `Clinched the #1 seed and a first-round bye in ${bands[0].plain}.`, 'tw']);
-      else if(bestSeed === 1)  lines.push(['🎯', `Still alive for the #1 seed and a first-round bye — ${anyGamesLeft ? 'results pending.' : 'final.'}`, 'tlive']);
-      else                     lines.push(['🔴', `No first-round bye — can't reach the #1 seed.`, 'tl']);
-    } else {
-      if(worstSeed === 1) {
-        lines.push(['✅', `Clinched the #1 seed in ${bands[0].plain}.`, 'tw']);
-      } else if(bestSeed === 1) {
-        lines.push(['🎯', `Still alive for the #1 seed — ${anyGamesLeft ? 'results pending.' : 'final.'}`, 'tlive']);
-      }
-      if(byes > 1) {
-        if(worstSeed <= byes) lines.push(['✅', `Clinched a first-round bye — locked into a top-${byes} seed.`, 'tw']);
-        else if(bestSeed > byes) lines.push(['🔴', `No first-round bye — can't reach a top-${byes} seed.`, 'tl']);
-        else if(worstSeed !== 1) lines.push(['🎯', `Still alive for a first-round bye (need a top-${byes} seed).`, 'tlive']);
-      }
-    }
-    if(!lines.length) {
-      lines.push(['🎯', `Seeding ${seedRange} in ${bands[0].plain} — ${anyGamesLeft ? 'results pending.' : 'final.'}`, 'tlive']);
-    }
-  } else {
-    // CLINCH (floor): cannot fall below worstB
-    if(worstB !== lastBand) {
-      if(worstB === topBand) {
-        lines.push(['✅', `Clinched ${topBand.label} — cannot fall out of the top ${topBand.max}.`, 'tw']);
-      } else {
-        const lower = bands.slice(bands.indexOf(worstB) + 1).map(b => b.plain);
-        lines.push(['✅', `Clinched ${worstB.label} or better — cannot fall to ${joinList(lower, 'or')}.`, 'tw']);
-      }
-    }
-    // ELIMINATION (ceiling): cannot reach above bestB
-    if(bestB !== topBand) {
-      const higher = bands.slice(0, bands.indexOf(bestB)).map(b => b.plain);
-      lines.push(['🔴', `Eliminated from ${joinList(higher, '&')} — best possible is ${bestB.label}.`, 'tl']);
-    }
-    if(!lines.length) {
-      lines.push(['🎯', `Still alive for ${bestB.label} — ${anyGamesLeft ? 'results pending.' : 'final.'}`, 'tlive']);
-    }
-  }
-
-  // ---- per-rival "what needs to happen" scenarios (with the runs-allowed tiebreaker) ----
-  // Only meaningful once Wicked has played AND the seed is still unsettled (bestSeed≠worstSeed).
-  // Walk outward from Wicked's current seed (closest battles first), skipping rivals already
-  // decided either way, and surface the concrete paths to finish ahead of each contested team.
-  const battleLines = [];
-  if (played > 0 && bestSeed !== worstSeed) {
-    const myIdx = curSeed - 1;
-    const order = [];
-    for (let d = 1; d < teamsForRanking.length; d++) {
-      if (myIdx - d >= 0) order.push(myIdx - d);
-      if (myIdx + d < teamsForRanking.length) order.push(myIdx + d);
-    }
-    for (const idx of order) {
-      if (battleLines.length >= 4) break;
-      const r = teamsForRanking[idx];
-      const paths = seedBattleLine(me, r, remOf);
-      if (!paths) continue;
-      const ahead = idx < myIdx;                 // rival currently seeded above Wicked?
-      const verb = ahead ? 'Pass' : 'Hold off';
-      const txt = `<b>${verb} ${historyEsc(shortTeam(r.name))}</b> (now #${idx + 1}): ${paths.join(' — <i>or</i> — ')}.`;
-      battleLines.push(['🎯', txt]);
-    }
-  }
-
-  // ---- remaining Wicked games ----
-  const myGames = (POOLS[MY_POOL].schedule || []).filter(g => g.hid===MY_ID || g.aid===MY_ID);
-  const gameRows = myGames.map(g => {
-    const opp = g.hid===MY_ID ? g.an : g.hn;
-    const status = (typeof gameStatuses!=='undefined' && gameStatuses[g.key]) || null;
-    const score = (typeof liveScores!=='undefined' && liveScores[g.key]) || null;
-    let tag;
-    if(status === 'final' && score) {
-      const myScore = g.hid===MY_ID ? score[0] : score[1];
-      const opScore = g.hid===MY_ID ? score[1] : score[0];
-      const win = myScore > opScore;
-      tag = `<span class="tag ${win?'tw':'tl'}">${win?'W':'L'} ${myScore}–${opScore}</span>`;
-    } else if(status === 'live' && score) {
-      const myScore = g.hid===MY_ID ? score[0] : score[1];
-      const opScore = g.hid===MY_ID ? score[1] : score[0];
-      tag = `<span class="tag tlive">LIVE ${myScore}–${opScore}</span>`;
-    } else {
-      const dt = new Date(g.t);
-      const ds = dt.toLocaleDateString('en-US',{weekday:'short'});
-      const ts = dt.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
-      tag = `<span class="ts">${ds} ${ts}</span>`;
-    }
-    return `<tr><td>vs ${historyEsc(opp)}</td><td style="text-align:right">${tag}</td></tr>`;
-  }).join('');
-
-  // ---- render ----
-  el.innerHTML = `
-    <div style="padding:4px 0 2px">
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px">
-        <span style="font-size:15px;font-weight:800;color:var(--red)">⭐ ${historyEsc(MY_NAME)}</span>
-        <span class="ts">${historyEsc(POOLS[MY_POOL].label)} · ${played}/${total} pool games complete · ${wRem} remaining</span>
+  const result = TournamentProjection.analyze(projectionSnapshot, { myId: MY_ID });
+  // Keep the opening message aspirational; once play starts, retain any projection limits.
+  const games = [...Object.values(projectionSnapshot?.results || {}),
+    ...Object.values(projectionSnapshot?.bracketGames || {}).flat()];
+  const started = games.some(g => (g.status && !['upcoming', 'scheduled', 'yet2Play'].includes(g.status))
+    || Number(g.topScore) > 0 || Number(g.botScore) > 0)
+    || Object.values(projectionSnapshot?.pools || {}).some(p => (p.standings || []).some(s =>
+      (String(s.record || '').match(/\d+/g) || []).some(n => Number(n) > 0)));
+  if (result.headline === 'Highest finish not established yet' && !started) {
+    el.innerHTML = `<div class="sunday-rally">
+      <div class="sunday-rally-main">
+        <div class="sunday-rally-label">${historyEsc(MY_NAME)} · Sunday outlook</div>
+        <h3>All hustle.<br>All heart.<br>All together.</h3>
+        <div class="sunday-rally-mantra">Work hard. Have fun. Play to win.</div>
       </div>
-      <div style="font-size:18px;font-weight:800;margin:6px 0 2px">${headline}</div>
-      <div class="note" style="margin:0 0 12px">${headSub}</div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-        <div style="flex:1;min-width:150px;background:var(--gold-bg);border:1px solid #fde68a;border-radius:8px;padding:9px 11px">
-          <div class="ts" style="text-transform:uppercase;letter-spacing:.5px">Ceiling</div>
-          <div style="font-size:15px;font-weight:700;margin-top:2px">${seedOnly ? `#${bestSeed} seed` : bestB.label}</div>
-          <div class="ts">${placementBracket ? 'best possible pool seed' : singleBracket ? bands[0].plain : `best possible seed #${bestSeed}`}</div>
-        </div>
-        <div style="flex:1;min-width:150px;background:#f3f4f6;border:1px solid var(--border);border-radius:8px;padding:9px 11px">
-          <div class="ts" style="text-transform:uppercase;letter-spacing:.5px">Floor</div>
-          <div style="font-size:15px;font-weight:700;margin-top:2px">${seedOnly ? `#${worstSeed} seed` : worstB.label}</div>
-          <div class="ts">${placementBracket ? 'worst possible pool seed' : singleBracket ? bands[0].plain : `worst possible seed #${worstSeed}`}</div>
-        </div>
+      <div class="sunday-rally-goal">
+        <strong>Let’s go win this thing.</strong>
+        <p>One pitch at a time. One team all weekend.</p>
+        <p class="sunday-rally-note">The road to Sunday is just getting started.</p>
       </div>
-
-      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px">
-        ${lines.map(([ic,txt,cls]) => `<div style="display:flex;align-items:flex-start;gap:8px;background:${cls==='tw'?'#dcfce7':cls==='tl'?'#fee2e2':'#fef9c3'};border-radius:8px;padding:8px 11px;font-size:13px;font-weight:600;color:${cls==='tw'?'#15803d':cls==='tl'?'#b91c1c':'#854d0e'}"><span>${ic}</span><span>${txt}</span></div>`).join('')}
-      </div>
-
-      ${battleLines.length ? `
-      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">What needs to happen</div>
-      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px">
-        ${battleLines.map(([ic,txt]) => `<div style="display:flex;align-items:flex-start;gap:8px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 11px;font-size:13px;line-height:1.5;color:#713f12"><span>${ic}</span><span>${txt}</span></div>`).join('')}
-      </div>` : ''}
-
-      <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Our team's pool games</div>
-      <table style="margin-bottom:10px"><tbody>${gameRows}</tbody></table>
-
-      <p class="note" style="margin-top:6px;line-height:1.6">${useDiv
-        ? `${bands.length === 1 ? bands[0].plain : 'Brackets'} ${bands.length === 1 ? 'is' : 'are'} seeded among the ${nTeams} 10${myLevel} teams only — the other skill level seeds its own bracket separately.`
-        : `Brackets are seeded across all ${nTeams} teams: ${bands.map((b,i)=>{const lo=i===0?1:bands[i-1].max+1;const hi=b.max===Infinity?nTeams:b.max;return `${b.plain} (${lo}–${hi})`;}).join(', ')}.`} ${useDiv && bands.length === 1 ? 'Seed' : 'Clinch/elimination'} calls are based on wins and hold no matter how run differential falls; the exact ${useDiv && bands.length === 1 ? 'seed' : `${anyGamesLeft ? 'projected' : 'final'} seed (#${curSeed})`} is settled live by runs allowed → runs scored → run diff.</p>
     </div>`;
+    return;
+  }
+  el.innerHTML = `<div style="padding:6px 0">
+    <div style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase">${historyEsc(MY_NAME)} · Sunday outlook</div>
+    <h3 style="margin:8px 0">${historyEsc(result.headline)}</h3>
+    ${result.details.map(text => `<p class="note">${historyEsc(text)}</p>`).join('')}
+    ${result.requirements?.length ? `<h4 style="margin:16px 0 8px">What needs to happen</h4><ul style="padding-left:22px;line-height:1.7">${result.requirements.map(text => `<li>${historyEsc(text)}</li>`).join('')}</ul>` : ''}
+  </div>`;
 }
 
 // ============================================================
@@ -3167,7 +2967,9 @@ function buildWickedScenarios(allTeams) {
 let rrExpanded = false;
 const FINISH_PLACE = { '1st': 1, '2nd': 2, '3rd': 3 };
 function seasonEventId(row) {
+  if (row?.providerRef) return String(row.providerRef);
   const url = row?.url || '';
+  if (/^https:\/\/(?:www\.)?allstartournaments\.com\/fastpitch\//i.test(url)) return url;
   const nc = url.match(/\/event\/(\d+)/)?.[1];
   if (nc) return nc;
   const t = url.match(/[?&]IDTournament=([^&]+)/i)?.[1];
@@ -3380,7 +3182,7 @@ function buildSeason() {
     const eventId=seasonEventId(t);
     const chip=t.finish?`<span class="chip" style="margin-left:6px;background:#dcfce7;color:#15803d">${trophyIcon(t.finish)} ${historyEsc(t.finish)} Place</span>`:t.qualifier?'<span class="chip chip-q" style="margin-left:6px">QUALIFIER</span>':'';
     const archiveEntry=SEASON_ARCHIVE_EVENTS[eventId];
-    const canReview=t.status==='done'&&(SEASON_ARCHIVE_FILES[eventId]||archiveEntry?.archived);
+    const canReview=t.status==='done'&&(SEASON_ARCHIVE_FILES[eventId]||archiveEntry?.eventKey);
     const inner=`<div class="tdot ${t.status}"></div><div><div class="t-name${t.status==='now'?' now':''}">${historyEsc(t.name)}${chip}</div><div class="t-loc">${historyEsc(t.location)}</div></div><div class="t-dates">${historyEsc(t.dates)}</div>${canReview?'<span class="t-row-arrow" aria-hidden="true">›</span>':''}`;
     if(canReview) return `<button type="button" class="t-row t-row-btn" onclick="showTournamentHistory(${jsArg(eventId)})" aria-label="View completed schedule and standings for ${historyEsc(t.name)}">${inner}</button>`;
     return t.url
@@ -3727,35 +3529,48 @@ function renderTournamentHistory(snap,row,eventId) {
   watchBracketTreeLayout(document.getElementById('historyBody'));
 }
 
+async function loadTournamentHistorySnapshot(eventId) {
+  const cacheKey = [APP_CONTEXT.teamKey, APP_CONTEXT.seasonKey, eventId].join(':');
+  if (seasonSnapshotCache.has(cacheKey)) return seasonSnapshotCache.get(cacheKey);
+  const entry = SEASON_ARCHIVE_EVENTS[eventId];
+  let snap = null;
+  if (entry?.archived) {
+    const bundle = await loadSeasonArchiveBundle();
+    snap = bundle?.events?.[entry.eventKey]?.snapshot || null;
+  }
+  // Past tournaments in an ongoing season retain their own structure, scores, and overrides.
+  // Read that event explicitly without changing the dashboard's featured tournament.
+  const urls = [];
+  if (entry?.eventKey && !entry.archived)
+    urls.push('/api/snapshot?' + contextQuery(false) + '&eventKey=' + encodeURIComponent(entry.eventKey));
+  if (SEASON_ARCHIVE_FILES[eventId]) urls.push(SEASON_ARCHIVE_FILES[eventId]);
+  for (const url of urls) {
+    if (snap) break;
+    try {
+      const response = await fetch(url, { cache:'no-store', signal:AbortSignal.timeout(9000) });
+      if (!response.ok) continue;
+      const candidate = await response.json();
+      if (candidate?.meta && !candidate.meta.schedulePending && !candidate.comingSoon) snap = candidate;
+    } catch {}
+  }
+  if (!snap) throw new Error('saved tournament results are unavailable');
+  seasonSnapshotCache.set(cacheKey, snap);
+  return snap;
+}
+
 async function showTournamentHistory(eventId) {
   const row=SEASON_DATA.find(t=>seasonEventId(t)===String(eventId));
-  const archiveUrl=SEASON_ARCHIVE_FILES[eventId];
-  const archiveEvent=SEASON_ARCHIVE_EVENTS[eventId]?.archived ? SEASON_ARCHIVE_EVENTS[eventId] : null;
-  if(!archiveUrl&&!archiveEvent){if(row?.url)window.open(row.url,'_blank','noopener');return;}
   const source=document.getElementById('historySource');
   source.href=row?.url||'#';source.style.display=row?.url?'':'none';
   document.getElementById('historyTitle').textContent=row?.name||'Completed Tournament';
   document.getElementById('historyMeta').textContent=[row?.dates,row?.location].filter(Boolean).join(' · ');
-  document.getElementById('historyBody').innerHTML='<div class="note" style="padding:42px;text-align:center"><span class="ld-spin"></span><br>Loading archived results…</div>';
+  document.getElementById('historyBody').innerHTML='<div class="note" style="padding:42px;text-align:center"><span class="ld-spin"></span><br>Loading tournament results…</div>';
   document.getElementById('historyModal').classList.add('open');
   try{
-    let snap=seasonSnapshotCache.get(eventId);
-    if(!snap){
-      if(archiveEvent){
-        const bundle=await loadSeasonArchiveBundle();
-        snap=bundle?.events?.[archiveEvent.eventKey]?.snapshot||null;
-      }
-      if(!snap&&archiveUrl){
-        const response=await fetch(archiveUrl,{cache:'no-store'});
-        if(!response.ok)throw new Error(`archive returned ${response.status}`);
-        snap=await response.json();
-      }
-      if(!snap)throw new Error('event is not present in the season archive');
-      seasonSnapshotCache.set(eventId,snap);
-    }
+    const snap=await loadTournamentHistorySnapshot(eventId);
     renderTournamentHistory(snap,row,String(eventId));
   }catch(e){
-    document.getElementById('historyBody').innerHTML=`<div class="note" style="padding:38px;text-align:center">The archived tournament details could not be loaded.${row?.url?`<br><br><a href="${historyEsc(row.url)}" target="blank" rel="noopener">View the official results ↗</a>`:''}</div>`;
+    document.getElementById('historyBody').innerHTML=`<div class="note" style="padding:38px;text-align:center">The saved tournament details could not be loaded.${row?.url?`<br><br><a href="${historyEsc(row.url)}" target="_blank" rel="noopener">View the official results ↗</a>`:''}</div>`;
   }
 }
 
@@ -3780,18 +3595,35 @@ function closeTournamentHistory(e) {
 // ============================================================
 // TEAM INFO POPUP
 // ============================================================
+function setTeamModalHeader(title, teamId, teamName, poolLabel = '') {
+  document.getElementById('modalTitle').textContent = title;
+  const pool = document.getElementById('modalPool');
+  pool.textContent = poolLabel;
+  pool.hidden = !poolLabel;
+  const subtitle = document.getElementById('modalSubtitle');
+  const location = gameChangerLocationHtml(teamId, teamName);
+  const locationLabel = document.getElementById('modalLocation');
+  locationLabel.innerHTML = location;
+  locationLabel.hidden = !location;
+  subtitle.classList.toggle('has-location', !!location);
+  subtitle.hidden = !location && !poolLabel;
+}
+function teamModalLinksHtml(teamId, providerHref = '', providerName = '') {
+  const link = (url, label) => `<a href="${historyEsc(url)}" target="blank" rel="noopener">${historyEsc(label)} <span class="external-arrow" aria-hidden="true">↗</span></a>`;
+  const gcUrl = gameChangerAppUrl(GAMECHANGER_TEAMS[teamId]);
+  const links = (providerHref ? link(providerHref, providerName) : '') + (gcUrl ? link(gcUrl, 'GameChanger') : '');
+  return links ? `<div class="team-modal-links">${links}</div>` : '';
+}
 function showRegisteredTeam(name) {
   const meta = PENDING_AST_META;
   if (!meta?.ast?.teams?.includes(name)) return;
   const { team } = splitRosterName(name);
   const key = 'name:' + String(name).toLowerCase().replace(/[^a-z0-9]/g, '');
   const gcTeamId = registeredTeamIsOurs(name, meta.ast, { name:MY_NAME }) ? MY_ID : key;
-  const gcLinks = gameChangerLinkHtml(gcTeamId);
-  const gcLocation = gameChangerLocationHtml(gcTeamId, name);
-  document.getElementById('modalTitle').textContent = team;
+  setTeamModalHeader(team, gcTeamId, name);
   document.getElementById('modalBody').innerHTML = `
-    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px"><span class="pool-badge">Registered team</span>${gcLinks}</div>
-    ${gcLocation ? `<p>${gcLocation}</p>` : ''}
+    <div style="margin-bottom:12px"><span class="pool-badge">Registered team</span></div>
+    ${teamModalLinksHtml(gcTeamId)}
     ${meta.division ? `<p>Tournament division: ${historyEsc(meta.division)}</p>` : ''}
     <p class="note">Game times, fields, pools, and matchups will appear when the tournament publishes its schedule.</p>`;
   document.getElementById('teamModal').classList.add('open');
@@ -3815,7 +3647,7 @@ function showTeam(teamId) {
   if(!foundTeam) return;
 
   const prefix = foundTeam.me ? '⭐ ' : foundTeam.sister ? '🟣 ' : '';
-  document.getElementById('modalTitle').textContent = prefix + splitRosterName(foundTeam.name).team;
+  setTeamModalHeader(prefix + splitRosterName(foundTeam.name).team, teamId, foundTeam.name, foundPool.label);
 
   const rows = teamGames.map(g => {
     const isHome = g.hid===teamId;
@@ -3884,20 +3716,18 @@ function showTeam(teamId) {
   }
 
   const srVal = teamSeason[teamId] || foundTeam.sr;
-  const srInfo = srVal ? `<span style="font-size:12px;color:var(--red);font-weight:600;margin-left:8px">📊 ${historyEsc(srVal)} season record</span>` : '';
+  const srInfo = srVal ? `<span style="font-size:12px;color:var(--red);font-weight:600">📊 ${historyEsc(srVal)} season record</span>` : '';
   const lvl = teamClass[teamId];
-  const lvlInfo = (lvl && !nameHasLevel(foundTeam.name, lvl)) ? `<span class="pool-badge" title="Team level" style="margin-left:4px;background:#f3f4f6;color:var(--muted)">${historyEsc(lvl)}</span>` : '';
+  const lvlInfo = (lvl && !nameHasLevel(foundTeam.name, lvl)) ? `<span class="pool-badge" title="Team level" style="background:#f3f4f6;color:var(--muted)">${historyEsc(lvl)}</span>` : '';
   const sourceTeamId = teamId === MY_ID && ACTIVE_SOURCE_TEAM_ID ? ACTIVE_SOURCE_TEAM_ID : teamId;
   const teamHref = ACTIVE_PROVIDER === 'tourneymachine' && ACTIVE_SOURCE_URL
     ? ACTIVE_SOURCE_URL.replace('Division.aspx', 'Team.aspx') + `&IDTeam=${encodeURIComponent(sourceTeamId)}`
     : `https://norcal.registerplay.com/pages/team/detail/${encodeURIComponent(teamId)}`;
-  const norcalLink = `<a href="${historyEsc(teamHref)}" style="font-size:12px;color:var(--accent);margin-left:auto;text-decoration:none;white-space:nowrap" target="blank">View on ${ACTIVE_PROVIDER === 'tourneymachine' ? 'Tourney Machine' : 'NorCal'} ↗</a>`;
-  const gcLink = gameChangerLinkHtml(teamId);
-  const gcLocation = gameChangerLocationHtml(teamId, foundTeam.name);
+  const profileLinks = teamModalLinksHtml(teamId, teamHref, ACTIVE_PROVIDER === 'tourneymachine' ? 'Tourney Machine' : 'NorCal');
   const bracketNote = bktRows.length ? '' : `<p style="font-size:11px;color:var(--muted);margin-top:10px">Bracket play ${BRACKET_DATE_LABEL} · times TBD based on pool standings</p>`;
   document.getElementById('modalBody').innerHTML = `
-    <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px"><div class="pool-badge">${historyEsc(foundPool.label)}</div>${lvlInfo}${srInfo}${norcalLink}${gcLink}</div>
-    ${gcLocation ? `<p style="margin-bottom:10px">${gcLocation}</p>` : ''}
+    ${(lvlInfo || srInfo) ? `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">${lvlInfo}${srInfo}</div>` : ''}
+    ${profileLinks}
     <div class="tg-list">${rows}${bktRows.join('')}</div>${bracketNote}`;
   document.getElementById('teamModal').classList.add('open');
 }
@@ -4007,8 +3837,8 @@ function buildScoreboard() {
   </div>
   <div class="sb-game-bottom">
     <div class="sb-game-teams">
-      <div class="sb-game-team ${hCls}"><div class="sb-team-left">${sbBadge(g.hid,g.hn)}<span class="sb-team-info"><span class="sb-team-name-line"><button class="team-link" onclick="showTeam(${jsArg(g.hid)})">${displayTeamName(g.hn)}</button>${gameChangerLinkHtml(g.hid)}</span>${gameChangerLocationHtml(g.hid, g.hn)}</span></div><span class="${hValCls}">${hVal}</span></div>
-      <div class="sb-game-team ${aCls}"><div class="sb-team-left">${sbBadge(g.aid,g.an)}<span class="sb-team-info"><span class="sb-team-name-line"><button class="team-link" onclick="showTeam(${jsArg(g.aid)})">${displayTeamName(g.an)}</button>${gameChangerLinkHtml(g.aid)}</span>${gameChangerLocationHtml(g.aid, g.an)}</span></div><span class="${aValCls}">${aVal}</span></div>
+      <div class="sb-game-team ${hCls}"><div class="sb-team-left">${sbBadge(g.hid,g.hn)}<span class="sb-team-info"><span class="sb-team-name-line"><button class="team-link" onclick="showTeam(${jsArg(g.hid)})">${displayTeamName(g.hn)}</button></span>${gameChangerLocationHtml(g.hid, g.hn)}</span></div><span class="${hValCls}">${hVal}</span></div>
+      <div class="sb-game-team ${aCls}"><div class="sb-team-left">${sbBadge(g.aid,g.an)}<span class="sb-team-info"><span class="sb-team-name-line"><button class="team-link" onclick="showTeam(${jsArg(g.aid)})">${displayTeamName(g.an)}</button></span>${gameChangerLocationHtml(g.aid, g.an)}</span></div><span class="${aValCls}">${aVal}</span></div>
     </div>
     <button class="sb-bell${bellOn?' on':''}" data-key="${g.key}" onclick="toggleGameNotif(${jsArg(g.key)})" title="${bellOn?'Disable':'Enable'} score alert"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
   </div>
@@ -4352,6 +4182,8 @@ function applySnapshot(snap) {
   const incomingMeta = snap.meta || {};
   AST_TEAM_NAME = incomingMeta.ast?.teamName || '';
   ACTIVE_PROVIDER = incomingMeta.provider || 'norcal';
+  projectionSnapshot = snap;
+  SEEDING_RULES = incomingMeta.projectionRules?.verified === true ? incomingMeta.projectionRules : null;
   PROJECTION_UNSUPPORTED = incomingMeta.projectionUnsupported === true;
   ACTIVE_SOURCE_URL = incomingMeta.sourceUrl || '';
   ACTIVE_SOURCE_TEAM_ID = incomingMeta.sourceProviderTeamId || '';
@@ -4936,8 +4768,8 @@ function initTournamentUI() {
   set('sbTabs', el => {
     const days = TOURNEY_DAYS.map(d =>
       `<button class="ptab" id="sbTab-${d.key}" onclick="switchSb(${jsArg(d.key)},this)">${d.label}</button>`).join('');
-    el.innerHTML = days + (PROJECTION_UNSUPPORTED && !BRACKET_ONLY ? '' :
-      `<button class="ptab" id="sbTab-wicked" onclick="switchSb('wicked',this)" style="margin-left:auto;font-weight:bolder">${trophyIcon(1)} Projections</button>`);
+    el.innerHTML = days +
+      `<button class="ptab" id="sbTab-wicked" onclick="switchSb('wicked',this)" style="margin-left:auto;font-weight:bolder">${trophyIcon(1)} Projections</button>`;
   });
   // Scoreboard day panels. The bracket-day panel hosts the bracket tier tabs +
   // panels (from BRACKETS); other day panels are filled by buildScoreboard().
@@ -4948,7 +4780,11 @@ function initTournamentUI() {
       `<div id="bktPanel-${b.level}"${i===0?'':' style="display:none"'}><div class="note">Loading…</div></div>`).join('');
     const seedNote = BRACKET_ONLY
       ? `<p class="note" style="margin-top:10px">NorCal's posted bracket · updates live · <span style="color:var(--muted)">every team is guaranteed its full set of games via the consolation rounds</span></p>`
-      : `<p class="note" style="margin-top:10px">Seeded by wins → runs allowed → runs scored → run diff · updates live · <span style="color:var(--muted)">ties within a pool use head-to-head first</span></p>`;
+      : typeof TournamentProjection === 'undefined'
+        ? `<p class="note" style="margin-top:10px">Projection tools could not load. Refresh to try again. The provider's posted bracket is shown when available.</p>`
+        : SEEDING_RULES
+        ? `<p class="note" style="margin-top:10px">Projected from current standings · seeded by ${historyEsc(TournamentProjection.describeRules(SEEDING_RULES).replace(/^./, c => c.toLowerCase()))} · updates live · <span style="color:var(--muted)">the provider's posted order is used when available</span></p>`
+        : `<p class="note" style="margin-top:10px">Projected from current standings: the provider's posted order when available, otherwise wins → runs allowed → runs scored · updates live · <span style="color:var(--muted)">tournament tiebreakers, such as head-to-head, can change the final seeding</span></p>`;
     const bracketDayInner = seedNote +
       `<div class="pool-tabs" style="margin-bottom:14px;overflow-y:hidden">${bktTabs}</div>` + bktPanels;
     // Pool events: the bracket lives on the bracket-day (last) tab. Bracket-only events instead
@@ -4957,7 +4793,7 @@ function initTournamentUI() {
     el.innerHTML = TOURNEY_DAYS.map(d =>
       `<div id="sbPanel-${d.key}" style="display:none;padding:0 14px 10px">${(!BRACKET_ONLY && d.key===BRACKET_DAY_KEY) ? bracketDayInner : ''}</div>`
     ).join('');
-    if (BRACKET_ONLY) set('bktPanel-wicked', wk => wk.innerHTML = bracketDayInner);
+    if (BRACKET_ONLY) set('bktPanel-wicked', wk => wk.innerHTML = '<div id="projectionOutlook"></div>' + bracketDayInner);
   });
   // Bracket-only events have no pool standings and no clinch/elimination scenarios — hide the
   // Standings card and repurpose the "Projections" tab as the dedicated bracket tab.

@@ -366,6 +366,23 @@
       <p class="note" id="tdIssues"></p>
     </div>
 
+    <!-- Add and edit: the Sunday outlook's pool seeding rules for this tournament. -->
+    <details class="subpanel collapsible" id="tdSeedingPanel">
+      <summary class="note section-title"><i class="fa-solid fa-chevron-right expander" aria-hidden="true"></i>Seeding rules <span class="summary-hint" id="tdSeedingHint"></span></summary>
+      <p class="note" id="tdSeedingDefault"></p>
+      <label style="display:flex;align-items:center;gap:6px;color:var(--txt)"><input type="checkbox" id="tdSeedCustom" style="width:auto"> Set seeding rules for this tournament</label>
+      <div id="tdSeedFields">
+        <div class="row" style="align-items:flex-end">
+          <div><label for="tdSeedPrimary">Rank pool teams by</label>
+            <select id="tdSeedPrimary"><option value="winPercentage">Best record (ties count as half a win)</option><option value="wins">Most wins</option></select></div>
+          <label style="display:flex;align-items:center;gap:6px;color:var(--txt)"><input type="checkbox" id="tdSeedTies" style="width:auto"> Pool games can end in a tie</label>
+        </div>
+        <label>Tiebreakers, in order</label>
+        <div class="row" id="tdSeedTiebreakers"></div>
+        <p class="note">Head-to-head applies only when exactly two teams are tied on record. With three or more tied it is skipped and the next tiebreaker decides.</p>
+      </div>
+    </details>
+
     <p class="note" id="tdAddNote">Weather and the tournament result fill in automatically once the tournament is saved. Edit it afterwards to override either one.</p>
 
     <!-- Edit mode only: both sections are overrides on top of what setup / the score check produce. -->
@@ -1197,6 +1214,10 @@ function openTdEditor(row = null) {
   $('#tdPlPlace').value = manualPlacement?.place ?? '';
   tdUpdatePlacementEmoji();
   $('#tdPlLabel').value = manualPlacement?.label || '';
+  $('#tdSeedingPanel').open = false;
+  $('#tdSeedCustom').checked = !!config.seedingRules;
+  tdFillSeedFields(config.seedingRules || tdSeedDefault());
+  tdRenderSeeding();
   $('#tdDetectedInfo').hidden = true;
   $('#tdDetectionFields').classList.add('hide');
   $('#tdDelete').classList.toggle('hide', !event);
@@ -1345,11 +1366,54 @@ async function tdDetect() {
     if (detection.detected.venue) renderTdVenueInfo(detection.detected.venue, 'Detected venue');
     renderTdDetectedInfo(detection);
     renderTdDetectionFields(detection);
+    tdRenderSeeding();
     toast('Detected — review the draft, then click Save');
   } catch (error) { toast(error.message, 'err'); }
 }
 $('#tdDetect').onclick = () => tdDetect();
 $('#tdCancel').onclick = closeTdEditor;
+
+// Seeding rules (validated + resolved server-side in lib/seeding.js). Unchecked = no saved rule
+// set: AST tournaments then use AST's default (served by getState), any other tournament stays
+// unverified.
+const SEED_PRIMARY = { winPercentage:'Best record', wins:'Most wins' };
+const SEED_TIEBREAKERS = [['headToHead', 'Head-to-head (two-team ties only)'], ['runsAllowed', 'Fewest runs allowed'],
+  ['runsScored', 'Most runs scored'], ['runDifferential', 'Best run differential']];
+const seedRulesText = rules => [SEED_PRIMARY[rules.primary] || rules.primary,
+  ...(rules.tiebreakers || []).map(key => SEED_TIEBREAKERS.find(([value]) => value === key)?.[1] || key)].join(' → ')
+  + (rules.allowsTies === false ? ' (no tie games)' : '');
+const tdIsAst = () => /allstartournaments\.com/i.test($('#tdUrl').value)
+  || (TD_DETECTION_URL === $('#tdUrl').value.trim() && TD_DETECTION?.provider === 'ast')
+  || (!TD_DETECTION && TD_EXISTING_EVENT?.discovery?.provider === 'ast');
+const tdSeedDefault = () => tdIsAst() ? STATE?.seedingDefaults?.ast || null : null;
+function tdFillSeedFields(rules) {
+  $('#tdSeedPrimary').value = rules?.primary || 'winPercentage';
+  $('#tdSeedTies').checked = rules ? rules.allowsTies !== false : true;
+  const picked = rules?.tiebreakers || [];
+  $('#tdSeedTiebreakers').innerHTML = [0, 1, 2, 3].map(i =>
+    `<select class="tdSeedTb" aria-label="Tiebreaker ${i + 1}" style="width:auto"><option value="">${i + 1}. —</option>${
+      SEED_TIEBREAKERS.map(([value, label]) => `<option value="${value}"${picked[i] === value ? ' selected' : ''}>${i + 1}. ${esc(label)}</option>`).join('')}</select>`).join('');
+}
+function tdRenderSeeding() {
+  const custom = $('#tdSeedCustom').checked, fallback = tdSeedDefault();
+  $('#tdSeedFields').classList.toggle('hide', !custom);
+  $('#tdSeedingDefault').textContent = fallback
+    ? `${custom ? 'AST default (replaced below)' : 'Using the AST default'}: ${seedRulesText(fallback)}.`
+    : custom ? '' : 'No rules set. Until they are, the Sunday outlook ranks pool teams by total wins and leaves ties unresolved.';
+  $('#tdSeedingHint').textContent = custom ? '· custom rules' : '';
+}
+$('#tdSeedCustom').onchange = () => {
+  if ($('#tdSeedCustom').checked) tdFillSeedFields(TD_EXISTING_EVENT?.config?.seedingRules || tdSeedDefault());
+  tdRenderSeeding();
+};
+$('#tdUrl').addEventListener('input', tdRenderSeeding);
+// null = no saved rule set (use the default). Returns false after a validation toast.
+function tdSeedingPayload() {
+  if (!$('#tdSeedCustom').checked) return null;
+  const tiebreakers = [...document.querySelectorAll('.tdSeedTb')].map(el => el.value).filter(Boolean);
+  if (new Set(tiebreakers).size !== tiebreakers.length) { toast('Each seeding tiebreaker can only be used once.', 'err'); return false; }
+  return { primary:$('#tdSeedPrimary').value, allowsTies:$('#tdSeedTies').checked, tiebreakers };
+}
 
 // Only sends the fields the admin actually changed from the last detection — an untouched field
 // keeps following automatic re-detection on every later rebuild instead of freezing at today's pick.
@@ -1398,13 +1462,17 @@ async function tdSave(makeActive = false) {
   if (endDate < startDate) return toast('End date must be on or after the start date.', 'err');
   const lat = $('#tdLat').value, lon = $('#tdLon').value;
   const label = $('#tdPlLabel').value.trim(), place = $('#tdPlPlace').value;
-  // Adding a tournament sends no overrides at all; editing sends the override fields as they stand
+  const seedingRules = tdSeedingPayload();
+  if (seedingRules === false) return null;
+  // Adding a tournament sends no weather/result overrides; editing sends them as they stand
   // (blank = no override — the server falls back to the provider venue / automatic result).
+  // Seeding rules go in both modes (null = use the default).
   const config = TD_EXISTING_EVENT ? {
     accuweatherUrl:$('#tdWx').value.trim(),
     venue:(lat !== '' || lon !== '') ? { lat:lat !== '' ? Number(lat) : undefined, lon:lon !== '' ? Number(lon) : undefined } : null,
     knownPlacement:(label || place !== '') ? { label, emoji:placementEmoji(place), place:place !== '' ? Number(place) : null } : null,
-  } : {};
+    seedingRules,
+  } : { seedingRules };
   let warning = '';
   if (makeActive) {
     if (seasonIsComplete()) return toast('Reopen this completed season first.', 'err');
