@@ -3,7 +3,7 @@
 // interval. Returns 503 before the first setup run; no real-data fixture is shipped.
 import {
   readStructure, readResults, readOverrides, readRev, readSeasonArchive, readScopedArchive,
-  resolveContext, contextInputFromRequest, mergeSnapshot, readCatalog, readGameChangerRecords,
+  resolveContext, contextInputFromRequest, mergeSnapshot, readCatalog, readGameChangerRecords, readDirectoryEntries,
 } from './lib/snapshot.js';
 import { ordinalSuffix, publicCatalog, seasonIsComplete } from './lib/context.js';
 import { verifyArchiveBundle } from './lib/archive.js';
@@ -11,10 +11,13 @@ import { withSeedingRules } from './lib/seeding.js';
 import { effectiveRoster } from './lib/minigame.js';
 import { seasonRecordWithExternal } from './lib/season-record.js';
 import { mergeRecentResults } from './lib/recent-results.js';
-import { gameChangerLinksForContext, resolvedGameChangerLinks } from './lib/gamechanger.js';
+import { loadDirectoryMatches } from './lib/team-directory.js';
+import { resolvedGameChangerLinks } from './lib/gamechanger.js';
 import { recordsForGameChangerLinks, locationsForGameChangerLinks } from './lib/gamechanger-records.js';
 import { applyTeamDisplay, editedTeamLabels, withRecentResultNames } from './lib/opponents.js';
-import { loadTeamDisplay } from './lib/team-display.js';
+import { loadHistoryTeamLabels, loadTeamDisplay } from './lib/team-display.js';
+import { listScoutingReports } from './lib/scouting-store.ts';
+import { scoutingReportStaleReason } from './lib/scouting-metrics.ts';
 
 // A team can exist without a resolvable season/event yet (a newly-created team, or a season with
 // no featured event). Rather than a hard 404, return a friendly "coming soon" payload the client
@@ -128,14 +131,16 @@ export default async function handler(req) {
     snap.config.gameChangerUrl = season.teamConfig.gameChangerUrl;
   // Profile links are editorial and may be corrected after archival; keep the frozen game
   // snapshot while applying the current event's link corrections over archived config.
-  snap.config.gameChangerTeams = resolvedGameChangerLinks(snap, gameChangerLinksForContext(context, {
+  const directoryEntries = await readDirectoryEntries();
+  const directory = await loadDirectoryMatches(context, snap, {
     ...(archivedEvent?.config?.gameChangerTeams || {}),
     ...(event.config?.gameChangerTeams || {}),
-  }));
-  snap.config.gameChangerTeamNames = resolvedGameChangerLinks(snap, {
+  }, directoryEntries);
+  snap.config.gameChangerTeams = directory.links;
+  snap.config.gameChangerTeamNames = { ...resolvedGameChangerLinks(snap, {
     ...(archivedEvent?.config?.gameChangerTeamNames || {}),
     ...(event.config?.gameChangerTeamNames || {}),
-  });
+  }), ...directory.names };
   const recordLinks = {
     ...snap.config.gameChangerTeams,
     ...(snap.config.gameChangerUrl && snap.meta?.providerTeamId
@@ -148,12 +153,14 @@ export default async function handler(req) {
   // the served games, and `teamDisplay` gives the page each team's resolved parts by id.
   const display = await loadTeamDisplay(scope, snap, {
     opponents:{ ...(archivedEvent?.config?.opponents || {}), ...(event.config?.opponents || {}) },
-    links:snap.config.gameChangerTeams, ownUrl:snap.config.gameChangerUrl, profiles:savedGameChangerProfiles,
+    directoryTeams:directory.teams, links:snap.config.gameChangerTeams, ownUrl:snap.config.gameChangerUrl, profiles:savedGameChangerProfiles,
   });
   snap = applyTeamDisplay(snap, display);
   delete snap.config.opponents;
   snap.config.teamDisplay = Object.fromEntries(Object.entries(display).map(([id, row]) => [id, {
     name:row.name, coach:row.coach, city:row.city, state:row.state, providerName:row.providerName,
+    // The class the page badges: an admin's, else the calculated one (teamClassSource, standings included).
+    ...(row.level ? { level:row.level } : {}),
   }]));
   if (seasonIsComplete(season) && servedFinalStats) {
     const f = servedFinalStats;
@@ -171,17 +178,11 @@ export default async function handler(req) {
   }
   snap.wicked = mergeRecentResults(snap.wicked || snap.meta?.wicked, eventSnapshots.filter(Boolean));
   // Recent Results name opponents as the provider did; apply each tournament's own name/coach
-  // edits to its games. Other tournaments are only resolved when they actually carry such an edit.
-  const labelsByEvent = { [String(snap.meta?.eventId)]:editedTeamLabels(display) };
-  await Promise.all(Object.entries(servedEvents).map(async ([key, item], i) => {
-    const eventSnap = eventSnapshots[i];
-    const edits = { ...(item.config?.opponents || {}), ...(season.events?.[key]?.config?.opponents || {}) };
-    if (key === context.eventKey || !eventSnap?.meta?.eventId
-      || !Object.values(edits).some(edit => edit?.name || edit?.coach)) return;
-    const links = { ...(item.config?.gameChangerTeams || {}), ...(season.events?.[key]?.config?.gameChangerTeams || {}) };
-    labelsByEvent[String(eventSnap.meta.eventId)] = editedTeamLabels(await loadTeamDisplay(
-      { teamKey:context.teamKey, seasonKey:context.seasonKey, eventKey:key }, eventSnap, { opponents:edits, links }));
-  }));
+  // edits and shared directory names to its games, reusing this request’s directory entries.
+  const labelsByEvent = {
+    [String(snap.meta?.eventId)]:editedTeamLabels(display),
+    ...await loadHistoryTeamLabels(context, servedEvents, season.events, (key, item, i) => eventSnapshots[i], { directoryEntries }),
+  };
   snap.wicked = withRecentResultNames(snap.wicked, labelsByEvent);
   snap.seasonData = servedSeason.seasonData?.length ? servedSeason.seasonData : null;
   snap.seasonFinishes = Object.fromEntries(
@@ -210,6 +211,8 @@ export default async function handler(req) {
   // Homerun Derby roster for this team + season — from the LIVE season record (not an archive
   // bundle): it's game config an admin can keep editing after a season completes.
   snap.miniGame = { roster: effectiveRoster({ teamKey:context.teamKey, seasonKey:context.seasonKey, season }) };
+  snap.scoutingReports = (await listScoutingReports(scope))
+    .filter(report => !scoutingReportStaleReason(report, snap.config.gameChangerTeams || {}, season.teamConfig?.scoutingIdentityRev));
   // No HTTP caching: during the active season, score overrides must appear immediately; after
   // archival, config/rev changes (including reopening the season) must still reach clients.
   return json(snap);

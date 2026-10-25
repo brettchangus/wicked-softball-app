@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600">
+  <!-- Stand-in team logo for the README demo (served in place of assets/icon.png). -->
+  <defs>
+    <radialGradient id="face" cx="38%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#ff3b57"/>
+      <stop offset=".55" stop-color="#c41230"/>
+      <stop offset="1" stop-color="#5e0716"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe7a3"/>
+      <stop offset="1" stop-color="#e0a526"/>
+    </linearGradient>
+  </defs>
+  <circle cx="300" cy="300" r="290" fill="#111"/>
+  <circle cx="300" cy="300" r="268" fill="url(#face)"/>
+  <circle cx="300" cy="300" r="268" fill="none" stroke="url(#gold)" stroke-width="14"/>
+  <!-- softball seams -->
+  <path d="M120 130C210 220 210 380 120 470M480 130C390 220 390 380 480 470" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="10"/>
+  <path d="M120 130C210 220 210 380 120 470M480 130C390 220 390 380 480 470" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="5" stroke-dasharray="14 18"/>
+  <!-- raven wing -->
+  <path d="M168 248c62-44 150-58 236-30-42 6-74 18-98 36 40-6 82-2 120 14-52 0-96 10-130 32-30-26-72-44-128-52z" fill="#111" opacity=".85"/>
+  <text x="300" y="402" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="230" fill="#fff" stroke="#111" stroke-width="8" paint-order="stroke">R</text>
+  <text x="300" y="488" text-anchor="middle" font-family="'Segoe UI', Arial, sans-serif" font-weight="800" font-size="44" letter-spacing="10" fill="url(#gold)">RAVENS</text>
+</svg>

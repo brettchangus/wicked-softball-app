@@ -49,7 +49,7 @@ test('missing projection tools preserve tournament initialization and published 
     bracketGameData:{}, projectionSnapshot:{},
     historyEsc:String, jsArg:JSON.stringify, trophyIcon:() => '', bracketTrophyPlace:() => 1,
     bracketTeam:(id, name) => ({ id, name }),
-    gameChangerLinkHtml:() => '', bktGameHeader:() => '', fmtFrameTime:() => '',
+    gameChangerLinkHtml:() => '', bracketScoutLinkHtml:() => '', bktGameHeader:() => '', fmtFrameTime:() => '',
     watchBracketTreeLayout:() => {},
     realOrPredicted:() => { throw new Error('must not predict seeds without the engine'); },
     renderSEBracket:() => { throw new Error('the published frame should render'); },

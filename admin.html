@@ -79,7 +79,18 @@
   .mg-table input[type=checkbox] { width:auto; }
   .mg-table td.mg-check { text-align:center; }
   .note.section-title { margin:0 0 4px; text-transform:uppercase; letter-spacing:.05em; }
+  .directory-panel { border-top:1px solid var(--line); margin-top:16px; padding-top:16px; }
+  #app details.card > summary { cursor:pointer; color:var(--mut); font-size:14px; text-transform:uppercase; letter-spacing:.05em; font-weight:600; }
+  #directoryTeams { overflow-x:auto; }
+  .directory-panel h3 { margin:0 0 8px; font-size:15px; }
+  .directory-panel .row { margin-top:10px; }
+  #scoutAdminReports { overflow-x:auto; }
+  #scoutAdminStatus:empty { display:none; }
+  .scout-actions { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
   /* Opponents card, its editor and the GameChanger token prompt */
+  #app details.card[open] > summary { margin-bottom:12px; }
+  .collapsed-context { display:block; margin-top:8px; color:var(--txt); font-size:13px; font-weight:400; letter-spacing:normal; text-transform:none; }
+  details[open] > summary .collapsed-context { display:none; }
   .opp-toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:0 0 12px; }
   .opp-toolbar .note { flex:1 1 160px; margin:0; }
   .opp-table { width:100%; border-collapse:collapse; font-size:13px; }
@@ -123,7 +134,10 @@
   .result-trophy { font-size:24px; line-height:36px; min-width:36px; text-align:center; color:var(--mut); }
   .result-trophy.place-1 { color:#f5b800; } .result-trophy.place-2 { color:#cbd5e1; }
   .result-trophy.place-3 { color:#b96f32; } .result-trophy.place-other { color:#94a3b8; }
+
+
 </style>
+<link rel="stylesheet" href="/assets/scouting-report.css">
 </head>
 <body>
 <header>
@@ -144,8 +158,8 @@
 
   <div id="app" class="hide">
     <!-- TEAM / SEASON CONTEXT -->
-    <div class="card">
-      <h2>Team & season</h2>
+    <details class="card" id="teamSeasonCard">
+      <summary>Team &amp; season<span class="collapsed-context" id="activeContextSummary"></span></summary>
       <p class="note" id="activeContext"></p>
       <p class="note hide" id="editingContext"></p>
 
@@ -232,11 +246,11 @@
         <button class="sec" id="ctxOpen">Open dashboard</button>
         <span class="note" id="noSeasonNote" hidden>This team has no season yet — add one to set up its schedule.</span>
       </div>
-    </div>
+    </details>
 
     <!-- TOURNAMENTS -->
-    <div class="card">
-      <h2>Tournaments</h2>
+    <details class="card" id="tournamentsCard">
+      <summary>Tournaments<span class="collapsed-context" id="activeTournamentSummary"></span></summary>
       <p class="note">Configured tournaments shown on the public season schedule. Edit a tournament to change its details or run provider detection.</p>
       <div class="game" id="archiveStatus"></div>
       <div id="seasonRows"></div>
@@ -248,39 +262,61 @@
         <button class="sec" id="replaceArchive">Rebuild completed snapshot</button>
         <button class="ghost" id="reopenSeason">Reopen season</button>
       </div>
-    </div>
+    </details>
 
-    <!-- SCORES -->
-    <div class="card">
-      <h2>Scores & stream links</h2>
-      <input class="filter" id="gameFilter" placeholder="Filter games (team, pool, time)…">
+    <!-- GAMES (scores + stream links) -->
+    <details class="card" id="gamesCard">
+      <summary>Games<span class="collapsed-context" id="gamesCollapsedSummary"></span></summary>
+      <div class="row filter" style="align-items:center">
+        <input class="grow" id="gameFilter" placeholder="Search games (team, pool, time)…">
+        <button class="sec" id="gamesShowAll">Show all</button>
+      </div>
       <div id="games"></div>
-    </div>
+    </details>
 
-    <div class="card">
-      <h2>Opponents</h2>
+    <details class="card" id="opponentsCard">
+      <summary>Opponents<span class="collapsed-context" id="opponentsCollapsedSummary"></span></summary>
       <div class="opp-toolbar">
         <span class="note" id="oppSummary"></span>
         <button id="gcAutoDetect">Auto-Detect GameChanger Links</button>
         <button class="sec" id="gcRefreshRecords">Refresh GameChanger Records</button>
       </div>
       <div id="oppTeams"></div>
-    </div>
+    </details>
+
+<details class="card" id="directoryCard">
+      <summary>Team directory<span class="collapsed-context" id="directoryCollapsedSummary"></span></summary>
+      <p class="note" id="directoryCount">Shared team identities and seasonal GameChanger profiles.</p>
+      <div class="row"><input class="grow" id="directoryFilter" aria-label="Search team directory" placeholder="Search teams, coaches, or aliases…"><button id="directoryAdd">+ Add team</button></div>
+      <div id="directoryTeams"></div>
+    </details>
+
+<details class="card" id="scoutAdminCard">
+      <summary>Scouting reports<span class="collapsed-context" id="scoutCollapsedSummary"></span></summary>
+      <div class="opp-toolbar"><span class="note" id="scoutAdminSummary"></span><button id="scoutGenerate">Generate missing</button><button class="sec" id="scoutRefreshAll">Refresh upcoming</button></div>
+      <p class="note" id="scoutScopeNote"></p>
+      <div id="scoutAdminReports"></div><p class="note" id="scoutAdminStatus" role="status" aria-live="polite"></p>
+    </details>
 
     <!-- HOMERUN DERBY (per team + season) -->
-    <div class="card" id="mgCard">
-      <h2>Homerun Derby</h2>
+    <details class="card" id="mgCard">
+      <summary>Homerun Derby</summary>
       <p class="note" id="mgRosterContext"></p>
       <div class="mg-summary" id="mgRosterSummary"></div>
       <div class="row" style="margin-top:14px">
         <button id="mgEditRoster">Edit roster</button>
         <button class="danger" id="opResetHs" style="margin-left:auto">Reset high scores</button>
       </div>
-    </div>
+    </details>
 
     <!-- CONFIG -->
-    <div class="card">
-      <h2>Config</h2>
+    <details class="card" id="generalSettingsCard">
+      <summary>General Settings</summary>
+      <div class="row">
+        <button class="sec" id="opPull">Pull scores from web now</button>
+        <button class="sec" id="opRefresh">Force refresh tabs</button>
+        <button class="sec" id="opSetup">Re-run setup</button>
+      </div>
       <!-- Links & team config -->
       <label>Snacks sheet URL <span style="opacity:.7">(team-wide — same every tournament)</span></label><input id="cfgSnacks" placeholder="https://…">
       <label for="cfgGameChanger">Our GameChanger team URL <span style="opacity:.7">(this season)</span></label><input id="cfgGameChanger" type="url" placeholder="https://web.gc.com/teams/…">
@@ -290,19 +326,16 @@
         <div><label>URL</label><input id="cfgLinkUrl" placeholder="https://…"></div>
       </div>
       <div class="row" style="margin-top:14px"><button id="saveCfg">Save config</button></div>
-      <h2 style="margin-top:20px">Operations</h2>
-      <div class="row">
-        <button class="sec" id="opPull">Pull scores from web now</button>
-        <button class="sec" id="opRefresh">Force refresh tabs</button>
-        <button class="sec" id="opSetup">Re-run setup</button>
-      </div>
-      <h2 style="margin-top:20px">Status</h2>
+    </details>
+
+    <details class="card" id="statusCard">
+      <summary>Status</summary>
       <div class="status-grid" id="statusGrid"></div>
-    </div>
+    </details>
 
     <!-- PUSH NOTIFICATIONS -->
-    <div class="card">
-      <h2>Push Notifications</h2>
+    <details class="card" id="pushNotificationsCard">
+      <summary>Push Notifications</summary>
       <label>Broadcast push to all subscribers</label>
       <input id="bcTitle" placeholder="Title (e.g. We won!)">
       <textarea id="bcBody" placeholder="Body (optional)"></textarea>
@@ -310,7 +343,7 @@
         <label style="margin:0;display:flex;align-items:center;gap:6px;color:var(--txt)"><input type="checkbox" id="bcRefresh" style="width:auto"> also reload tabs</label>
         <button id="opBroadcast" style="margin-left:auto">Send push</button>
       </div>
-    </div>
+    </details>
   </div>
 </main>
 
@@ -440,12 +473,30 @@
 </div>
 
 <!-- OPPONENT EDITOR MODAL -->
+<div class="modal-bg opp-editor-bg" id="directoryMatchPanel" role="dialog" aria-modal="true" aria-labelledby="directoryMatchTitle">
+  <div class="modal">
+    <h3 id="directoryMatchTitle">Change match</h3><p class="note" id="directoryMatchContext"></p>
+    <div class="row"><button data-directory-mode="existing" aria-pressed="true">Choose existing team</button><button class="ghost" data-directory-mode="create" aria-pressed="false">Create new team</button><button class="ghost" data-directory-mode="unmatched" aria-pressed="false">Leave unmatched</button></div>
+    <div id="directoryMatchFields"></div><p class="note" id="directoryMatchHelp"></p>
+    <div class="acts"><button class="ghost" id="directoryMatchCancel">Cancel</button><button id="directoryMatchSave">Save match</button></div>
+  </div>
+</div>
+
+<div class="modal-bg opp-editor-bg" id="directoryEditPanel" role="dialog" aria-modal="true" aria-labelledby="directoryEditTitle">
+  <div class="modal">
+    <h3 id="directoryEditTitle">Team Settings</h3><p class="note">Shared across tournaments.</p><div id="directoryEditFields"></div><div id="directoryOpponentFields" hidden></div>
+    <div class="acts"><button class="danger" id="directoryDelete" style="margin-right:auto" hidden>Delete</button><button class="ghost" id="directoryEditCancel">Cancel</button><button id="directoryEditSave">Save</button></div>
+  </div>
+</div>
+
 <div class="modal-bg opp-editor-bg" id="oppModalBg" role="dialog" aria-modal="true" aria-labelledby="oppModalTitle">
   <div class="modal">
     <h3 id="oppModalTitle">Edit opponent</h3>
     <p class="note" id="oppProvider"></p>
     <label for="oppName">Team name</label><input id="oppName" autocomplete="off">
     <label for="oppCoach">Coach</label><input id="oppCoach" autocomplete="off">
+    <label for="oppLevel">Class</label><select id="oppLevel"></select>
+    <p class="note" id="oppLevelNote">Sets the class badge and the class scouting reports use (Rec counts with C). Bracket seeding still follows the provider.</p>
     <div class="row">
       <div class="grow"><label for="oppCity">City</label><input id="oppCity" autocomplete="off"></div>
       <div><label for="oppState">State</label><input id="oppState" style="width:84px" maxlength="2" autocomplete="off" autocapitalize="characters"></div>
@@ -472,7 +523,7 @@
     <h3 id="gcTokenTitle">Auto-detect GameChanger links</h3>
     <p class="note" id="gcTokenMsg"></p>
     <label for="gcToken">GameChanger token (kept only in this open page)</label>
-    <input id="gcToken" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a fresh search token">
+    <input id="gcToken" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste a fresh GameChanger token">
     <p class="note hide" id="gcTokenError" role="alert"></p>
     <details class="gc-token-help"><summary>Get a token without DevTools</summary>
       <p>Drag <a id="gcTokenBookmarklet" draggable="true">Copy GC token</a> to your browser's bookmarks bar once. In a signed-in GameChanger tab, click that bookmark and search for any team. Then paste the copied token above.</p>
@@ -536,15 +587,34 @@ function toast(msg, kind = 'ok') {
   const el = $('#toast'); el.textContent = msg; el.className = 'toast show ' + kind;
   clearTimeout(_t); _t = setTimeout(() => el.className = 'toast', 2600);
 }
+// The confirm dialog can open over an editor modal: cover any open one, keep keyboard focus in
+// the dialog (Escape cancels), and hand focus back to whatever opened it.
 function confirmAction(title, msg, okLabel = 'Confirm', danger = false) {
   return new Promise(res => {
+    const bg = $('#modalBg'), ok = $('#modalOk'), cancel = $('#modalCancel'), opener = document.activeElement;
+    const covered = [...document.querySelectorAll('.modal-bg.show')].filter(el => el !== bg && !el.inert);
     $('#modalTitle').textContent = title;
     $('#modalMsg').textContent = msg;
-    const ok = $('#modalOk'); ok.textContent = okLabel; ok.className = danger ? 'danger' : '';
-    $('#modalBg').classList.add('show');
-    const done = v => { $('#modalBg').classList.remove('show'); ok.onclick = null; $('#modalCancel').onclick = null; res(v); };
+    ok.textContent = okLabel; ok.className = danger ? 'danger' : '';
+    const keys = event => {
+      if (event.key === 'Escape') { event.preventDefault(); done(false); }
+      if (event.key !== 'Tab') return;
+      if (event.shiftKey && document.activeElement === cancel) { event.preventDefault(); ok.focus(); }
+      else if (!event.shiftKey && document.activeElement === ok) { event.preventDefault(); cancel.focus(); }
+    };
+    const done = v => {
+      bg.classList.remove('show'); ok.onclick = null; cancel.onclick = null;
+      bg.removeEventListener('keydown', keys);
+      covered.forEach(el => { el.inert = false; });
+      if (opener?.isConnected) opener.focus();
+      res(v);
+    };
+    covered.forEach(el => { el.inert = true; });
+    bg.classList.add('show');
+    bg.addEventListener('keydown', keys);
     ok.onclick = () => done(true);
-    $('#modalCancel').onclick = () => done(false);
+    cancel.onclick = () => done(false);
+    cancel.focus();
   });
 }
 
@@ -565,6 +635,7 @@ async function unlock(secret) {
 async function loadAll() {
   const loadSeq = ++LOAD_SEQ;
   closeOpponentEditor();
+  window.closeDirectoryEditors?.();
   let catalogResult;
   try { catalogResult = await api('getCatalog'); }
   catch (e) {
@@ -599,11 +670,13 @@ async function loadAll() {
   if (STATE.noSeason) {
     // Team with no season yet — show the team, skip the season-dependent cards.
     $('#mgCard').hidden = true;
+    $('#scoutAdminCard').hidden = true;
     closeMiniGameEditor();
+    buildGames(); renderOpponents(); window.loadTeamDirectory?.().catch(e => toast(e.message, 'err'));
     $('#evInfo').innerHTML = `${esc(STATE.team?.name || CTX.teamKey)}<br><span class="note">No season yet — add one to set up its schedule.</span>`;
     return;
   }
-  renderEvInfo(); buildGames(); renderOpponents(); fillConfig(); initSeason(); initMiniGameRoster(); renderStatus();
+  renderEvInfo(); buildGames(); renderOpponents(); window.loadTeamDirectory?.().catch(e => toast(e.message, 'err')); renderScoutingAdmin(); fillConfig(); initSeason(); initMiniGameRoster(); renderStatus();
 }
 // Prefill the team editor from the full team record (STATE.team carries norcalTeamId, which the
 // public catalog omits).
@@ -662,6 +735,9 @@ function renderContext() {
   $('#activeContext').textContent = livePair
     ? `Active: ${activeTeam.name} · ${activeSeason.name}`
     : `Active: None · Default dashboard: ${defaultTeam?.name || '—'} · ${defaultSeason?.name || '—'}`;
+  $('#activeContextSummary').textContent = $('#activeContext').textContent.replace(/^Active: /, '');
+  const activeTournament = STATE?.season?.events?.[STATE.season.featuredEventKey];
+  $('#activeTournamentSummary').textContent = activeTournament?.name || (STATE?.activeEventKey && STATE?.meta?.name) || 'None';
   const different = CTX.teamKey !== activeTeam?.key || CTX.seasonKey !== activeSeason?.key;
   $('#editingContext').textContent = `Editing: ${team?.name || '—'} · ${team?.seasons?.[CTX.seasonKey]?.name || '—'}`;
   $('#editingContext').classList.toggle('hide', !different);
@@ -803,8 +879,27 @@ function buildGames() {
   GAMES = collectGames();
   renderGames();
 }
+// The list stays empty until the admin searches or asks for every game. Kept across loadAll()
+// so saving a score doesn't collapse the list being worked on.
+let GAMES_SHOW_ALL = false;
 function renderGames() {
-  const q = ($('#gameFilter').value || '').toLowerCase();
+  $('#gamesCollapsedSummary').textContent = `${GAMES.length} game${GAMES.length === 1 ? '' : 's'}`;
+  const raw = ($('#gameFilter').value || '').trim(), q = raw.toLowerCase();
+  const btn = $('#gamesShowAll');
+  btn.textContent = GAMES_SHOW_ALL ? 'Hide all' : 'Show all';
+  btn.disabled = !GAMES.length;
+  if (!GAMES.length) {
+    $('#games').innerHTML = `<p class="note">${!CTX.eventKey
+      ? 'No games — no tournament is set active for this season.'
+      : !SNAP ? 'Couldn’t load this tournament’s games.'
+      : SNAP.meta?.schedulePending ? 'No games yet — the provider hasn’t published this tournament’s schedule.'
+      : 'No games yet — this tournament’s schedule hasn’t been loaded.'}</p>`;
+    return;
+  }
+  if (!q && !GAMES_SHOW_ALL) {
+    $('#games').innerHTML = `<p class="note">Search for a team, pool, or time, or show all ${GAMES.length} game${GAMES.length === 1 ? '' : 's'}.</p>`;
+    return;
+  }
   const ov = overrides(), sl = streamLinks();
   $('#games').innerHTML = GAMES.filter(g =>
     !q || `${g.top} ${g.bot} ${g.where} ${fmtTime(g.time)}`.toLowerCase().includes(q)
@@ -833,7 +928,7 @@ function renderGames() {
         <button class="sec sStreamSave">Save link</button>
         <button class="ghost sStreamClear"${stream?'':' disabled'}>Clear</button></div>
     </div>`;
-  }).join('') || '<p class="note">No games yet (structure not loaded).</p>';
+  }).join('') || `<p class="note">No games match “${esc(raw)}”.</p>`;
 }
 $('#games')?.addEventListener('click', async e => {
   const card = e.target.closest('.game'); if (!card) return;
@@ -859,6 +954,12 @@ $('#games')?.addEventListener('click', async e => {
   }
 });
 $('#gameFilter')?.addEventListener('input', renderGames);
+// Show all / Hide all replace any search, so the click always changes the list.
+$('#gamesShowAll')?.addEventListener('click', () => {
+  GAMES_SHOW_ALL = !GAMES_SHOW_ALL;
+  $('#gameFilter').value = '';
+  renderGames();
+});
 
 // Self-contained so the link can be dragged to the bookmarks bar and run on web.gc.com.
 function gameChangerTokenBookmarklet() {
@@ -916,9 +1017,94 @@ $('#gcTokenBookmarklet').addEventListener('click', event => {
   event.preventDefault();
   toast('Drag Copy GC token to your bookmarks bar, then click it on web.gc.com.');
 });
+let SCOUT_ADMIN_BUSY=false;
+function renderScoutingAdmin(){
+  const state=STATE?.scouting||{opponents:[],reports:[],bracketsSet:false};
+  const eligibility=new Map(state.opponents.map(o=>[o.id,o]));
+  const reports=new Map(state.reports.map(r=>[r.id,r]));
+  const missing=state.opponents.filter(o=>!reports.has(o.id));
+  const refreshable=state.reports.filter(r=>eligibility.has(r.id));
+  const rows=[...state.opponents,...state.reports.filter(r=>!eligibility.has(r.id))];
+  $('#scoutAdminCard').hidden=!STATE?.activeEventKey;
+  $('#scoutScopeNote').textContent=state.bracketsSet
+    ? 'Upcoming matchups and possible bracket opponents.'
+    : 'Upcoming matchups · Bracket opponents appear when assigned.';
+  $('#scoutGenerate').textContent='Generate missing'+(missing.length?' ('+missing.length+')':'');
+  $('#scoutGenerate').disabled=SCOUT_ADMIN_BUSY||!missing.length;
+  $('#scoutRefreshAll').textContent='Refresh upcoming'+(refreshable.length?' ('+refreshable.length+')':'');
+  $('#scoutRefreshAll').disabled=SCOUT_ADMIN_BUSY||!refreshable.length;
+  $('#scoutAdminSummary').textContent=state.reports.length+' saved · '+missing.length+' to generate';
+  const stale=state.reports.filter(report=>report.stale).length;
+  $('#scoutCollapsedSummary').textContent=[state.reports.length+' saved',
+    state.reports.length-stale ? (state.reports.length-stale)+' ready' : '',
+    stale ? stale+(stale===1?' needs refresh':' need refresh') : '',missing.length+' missing'].filter(Boolean).join(' · ');
+  $('#scoutAdminReports').innerHTML=rows.length?'<table class="opp-table"><thead><tr><th>Opponent</th><th>Report</th><th class="opp-actions">Actions</th></tr></thead><tbody>'+rows.map(opponent=>{
+    const report=reports.get(opponent.id), upcoming=eligibility.get(opponent.id);
+    const role=upcoming?.role==='Confirmed opponent'?'Confirmed':upcoming?.role||'Past opponent';
+    const status=!report?'Not generated':report.stale?'Needs refresh':'Ready';
+    const updated=report&&(report.refreshedAt||report.generatedAt);
+    const dates=report?'Created '+scoutDate(report.generatedAt)+(report.refreshedAt?' · Refreshed '+scoutDate(report.refreshedAt):''):'';
+    const action=(type,label,disabled=false)=>'<button class="ghost" data-scout-action="'+type+'" data-id="'+esc(opponent.id)+'" aria-label="'+esc(label+' '+opponent.name)+'"'+(disabled?' disabled':'')+'>'+label+'</button>';
+    const actions=report?action('view','View')+action('refresh','Refresh',SCOUT_ADMIN_BUSY)+action('delete','Delete',SCOUT_ADMIN_BUSY):action('generate','Generate',SCOUT_ADMIN_BUSY);
+    return '<tr><td><strong>'+esc(opponent.name)+'</strong><div class="opp-meta">'+esc(role)+'</div></td><td>'+status+(updated?'<div class="opp-meta" title="'+esc(dates)+'">Updated '+esc(scoutDate(updated))+'</div>':'')+'</td><td class="opp-actions"><div class="scout-actions">'+actions+'</div></td></tr>';
+  }).join('')+'</tbody></table>':'<p class="note">No upcoming opponents or saved reports.</p>';
+}
+async function runScoutingBatch(action,id){
+  if(SCOUT_ADMIN_BUSY)return;
+  const state=STATE.scouting||{reports:[],opponents:[]};
+  const existing=new Set(state.reports.map(r=>r.id));
+  const targets=action==='generateScoutingReports'?state.opponents.filter(o=>!existing.has(o.id)&&(!id||o.id===id)):
+    action==='refreshScoutingReports'?state.opponents.filter(o=>existing.has(o.id)):
+    [state.opponents.find(o=>o.id===id)||state.reports.find(r=>r.id===id)].filter(Boolean);
+  if(!targets.length)return;
+  const generating=action==='generateScoutingReports',title=generating?'Generate scouting reports':'Refresh scouting reports';
+  if(!await confirmAction(title,(generating?'Create missing reports for:':'Collect newer game data for:')+'\n\n'+targets.map(o=>o.name).join('\n'),generating?'Generate':'Refresh'))return;
+  const requested={...CTX};let position=0;const failed=[];let completed=0;
+  SCOUT_ADMIN_BUSY=true;renderScoutingAdmin();
+  const work=async token=>{
+    for(;position<targets.length;position++){
+      if(CTX.teamKey!==requested.teamKey||CTX.seasonKey!==requested.seasonKey||CTX.eventKey!==requested.eventKey)throw new Error('The selected tournament changed. Start the remaining reports in that tournament.');
+      $('#scoutAdminStatus').textContent=(generating?'Generating ':'Refreshing ')+targets[position].name+' · '+(position+1)+' of '+targets.length;
+      try{
+        const result=await api(action,{...requested,opponentId:targets[position].id,gcToken:token});
+        completed+=result.completed?.length||0;failed.push(...(result.failed||[]));
+      }catch(error){if(error.code==='gameChangerToken')throw error;failed.push({name:targets[position].name,error:error.message});}
+    }
+    return {completed,failed};
+  };
+  try{
+    let result=null,tokenError='';
+    if(GC_TOKEN){
+      try{result=await work(GC_TOKEN);}catch(error){if(error.code!=='gameChangerToken')throw error;GC_TOKEN='';tokenError=error.message;}
+    }
+    if(!result){
+      const done=await promptGameChangerToken({title:'GameChanger token',message:'Needed to collect real box scores for scouting reports. Reused for link discovery and later reports in this open page.',error:tokenError,submitLabel:generating?'Generate reports':'Refresh reports',busyLabel:generating?'Generating…':'Refreshing…',work});
+      result=done?.result||null;
+    }
+    await refreshState();
+    $('#scoutAdminStatus').textContent=result?completed+' report'+(completed===1?'':'s')+' completed.'+(failed.length?' '+failed.map(f=>f.name+': '+f.error).join(' '):''):completed+' reports completed. Remaining reports were canceled.';
+  }catch(error){$('#scoutAdminStatus').textContent=error.message;toast(error.message,'err');}
+  finally{SCOUT_ADMIN_BUSY=false;renderScoutingAdmin();}
+}
+$('#scoutGenerate').onclick=()=>runScoutingBatch('generateScoutingReports');
+$('#scoutRefreshAll').onclick=()=>runScoutingBatch('refreshScoutingReports');
+$('#scoutAdminReports').addEventListener('click',async e=>{
+  const button=e.target.closest('[data-scout-action]');if(!button)return;
+  const id=button.dataset.id,action=button.dataset.scoutAction;
+  if(action==='view')return openScoutingReport(id,contextQuery(),STATE.scouting?.reports?.find(r=>r.id===id)?.name||'');
+  if(action==='generate')return runScoutingBatch('generateScoutingReports',id);
+  if(action==='refresh')return runScoutingBatch('refreshScoutingReport',id);
+  const report=STATE.scouting.reports.find(r=>r.id===id);
+  if(await confirmAction('Delete scouting report','Delete '+report.name+'? You can generate it again if it is an eligible opponent.','Delete',true))await run(()=>api('deleteScoutingReport',{opponentId:id}),'Report deleted.');
+});
+
 // ---------- opponents ----------
-const OPP_FIELDS = ['name', 'coach', 'city', 'state'];
-const OPP_LABELS = { name:'Team name', coach:'Coach', city:'City', state:'State' };
+const OPP_FIELDS = ['name', 'coach', 'city', 'state', 'level'];
+const OPP_LABELS = { name:'Team name', coach:'Coach', city:'City', state:'State', level:'Class' };
+// The classes an admin can set come from the server (getState's opponentLevels); the calculated
+// class may also be A or D. This list only orders the choices.
+const OPP_LEVEL_ORDER = ['A', 'B', 'C', 'D', 'Rec'];
+const oppInput = key => $('#opp' + key[0].toUpperCase() + key.slice(1));
 let GC_TOKEN = '';                                  // page memory only — gone on reload
 let GC_REVIEW = { context:'', rows:new Map() };     // teams auto-detect could not link: id → { candidates, error }
 let OPP_EDIT = null;                                // { row, link, picked } while the editor is open
@@ -941,24 +1127,30 @@ function renderOpponents() {
   const records = SNAP?.config?.gameChangerRecords || {};
   const rows = opponents();
   const linked = rows.filter(row => links[row.teamId]).length;
+  $('#opponentsCollapsedSummary').textContent = `${rows.length} opponent${rows.length === 1 ? '' : 's'}`;
   $('#oppSummary').textContent = rows.length
     ? `${rows.length} team${rows.length === 1 ? '' : 's'} · ${linked} linked to GameChanger` : '';
   $('#oppTeams').innerHTML = rows.length ? `<table class="opp-table"><thead><tr><th>Team</th><th>Location</th><th>GameChanger</th><th class="opp-actions"></th></tr></thead><tbody>${rows.map(row => {
+    const matched = !!STATE?.directoryMatches?.[row.teamId]?.entryId;
     const url = links[row.teamId] || '';
     const record = records[row.teamId];
     const recordText = record ? `${record.win}–${record.loss}${record.tie ? `–${record.tie}` : ''}` : '—';
     const location = [row.city, row.state].filter(Boolean).join(', ');
     const review = gcReview(row.teamId);
     const gameChanger = url
-      ? `<a class="opp-linked" href="${esc(url)}" target="blank" rel="noopener">${esc(names[row.teamId] || 'Open team')} ↗</a><div class="opp-meta">Record: ${esc(recordText)}</div>`
+      ? `<a class="opp-linked" href="${esc(url)}" target="blank" rel="noopener">${esc(names[row.teamId] || 'GameChanger')} ↗</a><div class="opp-meta">Record: ${esc(recordText)}</div>`
       : `<span class="badge">Not linked</span>${review ? `<div class="opp-meta">${esc(gcReviewText(review))}</div>` : ''}`;
     return `<tr data-team-id="${esc(row.teamId)}">
-      <td><strong>${esc(row.name)}</strong><div class="opp-meta">${row.coach ? `Coach ${esc(row.coach)}` : 'No coach'}</div></td>
+      <td><strong>${esc(row.name)}</strong><div class="opp-meta">${row.coach ? `Coach ${esc(row.coach)}` : 'No coach'}${row.level ? ` · Class ${esc(row.level)}` : ''}</div></td>
       <td>${location ? esc(location) : '<span class="opp-none">No location</span>'}</td>
-      <td>${gameChanger}</td>
-      <td class="opp-actions"><button class="ghost oppEdit" aria-label="Edit ${esc(row.name)}">Edit</button></td></tr>`;
+      <td>${gameChanger}${window.directoryMatchLabel?.(row.teamId) || ''}</td>
+      <td class="opp-actions"><button class="ghost directoryMatch" data-directory-team="${esc(row.teamId)}">${matched ? 'Change match' : 'Match'}</button>${matched ? ` <button class="ghost oppEdit" aria-label="Edit ${esc(row.name)}">Edit</button>` : ''}</td></tr>`;
   }).join('')}</tbody></table>` : `<p class="note">${SNAP?.meta?.schedulePending ? 'No registered teams are available for this tournament yet.' : 'No opponents in the current tournament snapshot.'}</p>`;
 }
+$('#oppTeams').addEventListener('click', event => {
+  const button = event.target.closest('[data-directory-team]');
+  if (button) window.openDirectoryMatch?.(button.dataset.directoryTeam);
+});
 function gameChangerResultsHtml(candidates) {
   return candidates.length ? candidates.map(candidate => {
     const matches = [candidate.cityMatch && 'city', candidate.coachMatch && 'coach', candidate.ageMatch && 'age'].filter(Boolean);
@@ -970,12 +1162,12 @@ function gameChangerResultsHtml(candidates) {
 // stays open while it runs so a rejected or expired token is reported in place and can be
 // replaced. Resolves { result } on success, or null when cancelled. The token is remembered in
 // page memory, so later searches in this page session are prefilled or skip the prompt.
-function promptGameChangerToken({ title, message, error = '', work }) {
+function promptGameChangerToken({ title, message, error = '', submitLabel = 'Search', busyLabel = 'Searching…', work }) {
   return new Promise(resolve => {
     const bg = $('#gcTokenBg'), input = $('#gcToken'), note = $('#gcTokenError');
     const search = $('#gcTokenSearch'), cancel = $('#gcTokenCancel');
     const showError = text => { note.textContent = text; note.classList.toggle('hide', !text); };
-    const busy = on => { search.disabled = cancel.disabled = on; search.textContent = on ? 'Searching…' : 'Search'; };
+    const busy = on => { search.disabled = cancel.disabled = on; search.textContent = on ? busyLabel : submitLabel; };
     const close = value => {
       bg.classList.remove('show');
       search.onclick = cancel.onclick = input.onkeydown = input.oninput = null;
@@ -985,6 +1177,7 @@ function promptGameChangerToken({ title, message, error = '', work }) {
     $('#gcTokenTitle').textContent = title;
     $('#gcTokenMsg').textContent = message;
     input.value = GC_TOKEN;
+    search.textContent = submitLabel;
     showError(error);
     search.onclick = async () => {
       const token = input.value.trim();
@@ -1047,7 +1240,7 @@ $('#gcRefreshRecords')?.addEventListener('click', async () => {
 function opponentFieldOverrides() {
   const { row } = OPP_EDIT;
   return Object.fromEntries(OPP_FIELDS.map(key => {
-    let value = $('#opp' + key[0].toUpperCase() + key.slice(1)).value.replace(/\s+/g, ' ').trim();
+    let value = oppInput(key).value.replace(/\s+/g, ' ').trim();
     if (key === 'state') value = value.toUpperCase();
     return [key, value && value !== (row.defaults[key] || '') ? value : ''];
   }));
@@ -1071,11 +1264,17 @@ function openOpponentEditor(teamId) {
   OPP_EDIT = { row, link, picked:null };
   $('#oppModalTitle').textContent = `Edit ${row.name}`;
   $('#oppProvider').textContent = `Provider name: ${row.providerName}`;
+  // Class: the calculated class is preselected and marked; with none, a blank "None" choice.
+  const calculated = row.defaults.level || '';
+  const levels = [...new Set([...(calculated ? [calculated] : []), ...(STATE?.opponentLevels || []), ...(row.level ? [row.level] : [])])]
+    .sort((a, b) => OPP_LEVEL_ORDER.indexOf(a) - OPP_LEVEL_ORDER.indexOf(b));
+  $('#oppLevel').innerHTML = (calculated ? '' : '<option value="">None (not calculated)</option>')
+    + levels.map(level => `<option value="${esc(level)}">${esc(level)}${level === calculated ? ' (calculated)' : ''}</option>`).join('');
   const hints = { name:row.providerName, coach:'No coach', city:'No city', state:'ST' };
   OPP_FIELDS.forEach(key => {
-    const input = $('#opp' + key[0].toUpperCase() + key.slice(1));
+    const input = oppInput(key);
     input.value = row[key] || '';
-    input.placeholder = row.defaults[key] || hints[key];
+    if (key !== 'level') input.placeholder = row.defaults[key] || hints[key];
   });
   $('#oppGcUrl').value = link;
   renderOpponentGcNote();
@@ -1094,13 +1293,17 @@ function closeOpponentEditor() {
 }
 $('#oppTeams')?.addEventListener('click', e => {
   const button = e.target.closest('.oppEdit');
-  if (button) openOpponentEditor(button.closest('tr').dataset.teamId);
+  if (!button) return;
+  const teamId = button.closest('tr').dataset.teamId;
+  if (STATE?.directoryMatches?.[teamId]?.entryId && window.openLinkedDirectoryTeam)
+    window.openLinkedDirectoryTeam(teamId);
+
 });
 $('#oppCancel').onclick = closeOpponentEditor;
 $('#oppGcUrl').addEventListener('input', () => { if (OPP_EDIT) renderOpponentGcNote(); });
 $('#oppReset').onclick = () => {
   if (!OPP_EDIT) return;
-  OPP_FIELDS.forEach(key => { $('#opp' + key[0].toUpperCase() + key.slice(1)).value = OPP_EDIT.row.defaults[key] || ''; });
+  OPP_FIELDS.forEach(key => { oppInput(key).value = OPP_EDIT.row.defaults[key] || ''; });
 };
 $('#oppFind').onclick = async () => {
   if (!OPP_EDIT) return;
@@ -1143,7 +1346,7 @@ $('#oppSave').onclick = async () => {
   for (const key of OPP_FIELDS) {
     if (next[key] === (row.override[key] || '')) continue;
     fields[key] = next[key];
-    changes.push(`${OPP_LABELS[key]}: ${next[key] || `${row.defaults[key] || 'none'} (provider's value)`}`);
+    changes.push(`${OPP_LABELS[key]}: ${next[key] || `${row.defaults[key] || 'none'} (${key === 'level' ? 'calculated' : "provider's value"})`}`);
   }
   const url = $('#oppGcUrl').value.trim();
   if (url !== link) {
@@ -1924,7 +2127,7 @@ async function refreshState() {
   SNAP = snap; STATE = state;
   preferFreshSeason();
   CATALOG = STATE.catalog || CATALOG;
-  renderContext(); renderEvInfo(); renderGames(); renderOpponents(); fillConfig(); initSeason(); initMiniGameRoster(); renderStatus();
+  renderContext(); renderEvInfo(); renderGames(); renderOpponents(); renderScoutingAdmin(); fillConfig(); initSeason(); initMiniGameRoster(); renderStatus();
 }
 
 const unlockTyped = () => unlock($('#secret').value);
@@ -1933,5 +2136,40 @@ $('#secret').addEventListener('keydown', e => { if (e.key === 'Enter') unlockTyp
 // Auto-unlock if a key is already stored on this device.
 if (adminKey()) unlock();
 </script>
+
+<div class="modal-bg" id="scoutLevelBg" role="dialog" aria-modal="true" aria-labelledby="scoutLevelTitle" style="z-index:320"><div class="modal"><h3 id="scoutLevelTitle">Opponent class</h3><p class="note" id="scoutLevelName"></p><label for="scoutLevelChoice">Class</label><select id="scoutLevelChoice"><option value="">Automatic — tournament class or season results</option><option value="provider">Link verified NorCal profile</option><option value="B">B — coach review</option><option value="C">C — coach review</option></select><label for="scoutLevelSource">NorCal team profile URL (when linking a profile)</label><input id="scoutLevelSource" type="url" placeholder="https://norcal.registerplay.com/pages/team/detail/…"><label for="scoutLevelReason">Reason / team match details</label><input id="scoutLevelReason" type="text" maxlength="500" placeholder="Confirm the age, coach and current roster"><p class="note">Use a profile only after verifying it is this team and roster. Applies throughout the selected season. Refresh reports after saving.</p><div class="acts"><button class="ghost" id="scoutLevelCancel">Cancel</button><button id="scoutLevelSave">Save class</button></div></div></div>
+<script src="/assets/scouting-report.js"></script>
+<script>
+let SCOUT_CLASSIFY=null;
+function editScoutingCompetition(publicId){
+  const game=SCOUT_REPORT?.collection.games.find(g=>g.opponentPublicId===publicId);
+  if(!game)return;
+  SCOUT_CLASSIFY={publicId,opponentId:SCOUT_REPORT.opponent.id,context:{...CTX}};
+  const identity=STATE.season?.teamConfig?.scoutingIdentities?.[publicId];
+  $('#scoutLevelName').textContent=game.opponent+' · '+(SCOUT_REPORT.collection.season||'current season');
+  $('#scoutLevelChoice').value=identity?(identity.basis==='Coach classification'?identity.level:'provider'):'';
+  $('#scoutLevelSource').value=identity?.source||'';
+  $('#scoutLevelReason').value=identity?.reason||'';
+  $('#scoutLevelBg').inert=false;$('#scoutLevelBg').classList.add('show');
+  $('#scoutModal').inert=true;$('#scoutLevelChoice').focus();
+}
+function closeScoutingCompetition(){
+  $('#scoutLevelBg').classList.remove('show');$('#scoutLevelBg').inert=true;$('#scoutModal').inert=false;
+}
+$('#scoutLevelCancel').onclick=closeScoutingCompetition;
+$('#scoutLevelSave').onclick=async()=>{
+  if(!SCOUT_CLASSIFY)return;
+  const payload={...SCOUT_CLASSIFY.context,opponentId:SCOUT_CLASSIFY.opponentId,publicId:SCOUT_CLASSIFY.publicId,level:$('#scoutLevelChoice').value,source:$('#scoutLevelSource').value.trim(),reason:$('#scoutLevelReason').value.trim()};
+  if(payload.level&&!payload.reason)return toast('Enter the reason for this class or how you confirmed the team match.','err');
+  if(payload.level==='provider'&&!payload.source)return toast('Enter the NorCal team profile URL.','err');
+  const name=$('#scoutLevelName').textContent;
+  closeScoutingCompetition();closeScoutingReport();
+  if(!await confirmAction('Save opponent class',name+'\n\n'+(payload.level==='provider'?'Use the B/C class from this verified NorCal profile: '+payload.source:payload.level?'Coach-reviewed class: '+payload.level:'Return to automatic classification.')+'\n\nApplies to this opponent throughout the selected season. Saved reports will need refresh.','Save'))return;
+  const result=await run(()=>api('setScoutingIdentity',payload),'Classification saved. Refresh affected reports.');
+  if(result?.identity?.providerName)$('#scoutAdminStatus').textContent='Linked NorCal profile: '+result.identity.providerName+'. Refresh reports to use its classification.';
+};
+
+</script>
+<script src="/assets/team-directory-admin.js"></script>
 </body>
 </html>

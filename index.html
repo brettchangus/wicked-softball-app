@@ -238,7 +238,22 @@ body.season-over #standingsCard{display:none!important;}
 .sec-toggle{display:inline-flex;align-items:center;background:none;border:none;color:rgba(255,255,255,.8);cursor:pointer;padding:0 2px;margin-left:4px;font-size:16px;line-height:1;transition:transform .2s;}
 .sec-toggle.nxt{margin-left:8px;}
 .card.sec-collapsed .card-body{display:none;}
-.nxt-card.sec-collapsed .nxt-card-divider,.nxt-card.sec-collapsed .nxt-card-body,.nxt-card.sec-collapsed .nxt-path{display:none;}
+.nxt-card.sec-collapsed .nxt-card-divider,.nxt-card.sec-collapsed .nxt-rail,.nxt-card.sec-collapsed .nxt-pager{display:none;}
+/* Upcoming Games pager: one page per remaining game, swiped horizontally with snap points. */
+.nxt-rail{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior-x:contain;}
+.nxt-rail::-webkit-scrollbar{display:none;}
+.nxt-rail:focus-visible{outline:2px solid #fff;outline-offset:-2px;}
+.nxt-page{flex:0 0 100%;min-width:0;scroll-snap-align:start;}
+.nxt-pager{display:flex;align-items:center;justify-content:center;gap:10px;padding:0 16px 12px;}
+.nxt-pager[hidden]{display:none;}
+.nxt-arrow{width:30px;height:30px;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:#fff;font-size:16px;line-height:1;cursor:pointer;display:grid;place-items:center;padding:0;}
+.nxt-arrow:disabled{opacity:.3;cursor:default;}
+.nxt-arrow:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+.nxt-dots{display:flex;gap:6px;}
+.nxt-dots i{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.35);transition:width .2s,background .2s;}
+.nxt-dots i.on{width:16px;border-radius:3px;background:#fff;}
+.nxt-count{min-width:36px;text-align:center;font-size:11px;font-weight:700;letter-spacing:1px;color:#ddd;font-variant-numeric:tabular-nums;}
+@media(prefers-reduced-motion:reduce){.nxt-dots i{transition:none;}}
 .sec-collapsed .sec-toggle{transform:rotate(-90deg);}
 /* BANNER */
 .nxt-card{background:linear-gradient(135deg,#1a1a1a,#7a0010,var(--red));color:#fff;border-radius:10px;overflow:hidden;}
@@ -259,6 +274,7 @@ body.season-over #standingsCard{display:none!important;}
 .nxt-team-name-line{display:block;}
 .nxt-team-info .team-location{font-size:11px;font-weight:400;color:rgba(255,255,255,.72);}
 .nxt-proj{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;opacity:.7;margin-left:5px;padding:1px 5px;border:1px solid rgba(255,255,255,.35);border-radius:4px;}
+.nxt-cond{display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:1px 6px;border:1px solid rgba(255,255,255,.45);border-radius:4px;white-space:nowrap;}
 .nxt-details{display:flex;flex-direction:column;justify-content:center;gap:14px;padding-left:20px;border-left:1px solid rgba(255,255,255,.2);min-width:130px;}
 @media(min-width:651px){.nxt-details{min-width:180px;}}
 .nxt-venue-block{display:flex;align-items:center;gap:6px;}
@@ -351,7 +367,7 @@ tr:last-child td{border-bottom:none;}
 .s-season.has-rec{background:var(--red-bg);color:var(--red);border-color:#fccdd5;font-weight:600;}
 .s-rec-line{margin-top:3px;}
 .s-rec-line .s-season{margin-left:0;}
-@media(max-width:560px){#standingsCard .s-detail-col,#standingsCard .s-bracket-col{display:none;}#standingsCard th,#standingsCard td{padding-left:4px;padding-right:4px;}}
+@media(max-width:560px){#standingsCard .s-bracket-col{display:none;}#standingsCard th,#standingsCard td{padding-left:4px;padding-right:4px;}}
 .brkt{font-size:10px;padding:2px 5px;border-radius:10px;font-weight:600;margin-left:2px;flex-shrink:0;}
 .brkt-p{background:#fce7f3;color:#9d174d;}.brkt-g{background:#fef3c7;color:#92400e;}.brkt-s{background:#eff6ff;color:#1d4ed8;}.brkt-b{background:#f3f4f6;color:#6b7280;}
 .rdp{color:#15803d;}.rdn{color:#b91c1c;}
@@ -382,6 +398,8 @@ tr:last-child td{border-bottom:none;}
 .bt.me{border-color:var(--red);background:var(--red-bg);font-weight:600;color:var(--red);}
 .bt.tbd{background:#f9fafb;color:#9ca3af;border-style:dashed;font-style:italic;}
 .bt-name{flex:1;min-width:0;}
+.bt-scout{font-size:inherit;}
+.bt-scout-sep{color:var(--muted);font-weight:400;}
 .bt-score{flex-shrink:0;font-weight:700;font-variant-numeric:tabular-nums;color:var(--text);}
 .bt-score.win{color:#15803d;}.bt-score.lose{color:#9ca3af;}.bt-score.live{color:#854d0e;}
 .bvs{font-size:10px;color:var(--muted);text-align:center;margin:2px 0;}
@@ -409,6 +427,29 @@ tr:last-child td{border-bottom:none;}
 .sb-game-time{font-size:12px;font-weight:700;color:var(--text);}
 .sb-game-field{font-size:11px;color:var(--muted);text-decoration:none;}
 .sb-game-bottom{display:flex;align-items:center;gap:6px;}
+/* Scouting report links: a pill chip on schedule rows, a teaser strip on the Next Game card. */
+.sb-scout-link{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:5px 11px 5px 9px;border-radius:999px;background:var(--card);color:var(--red);border:1px solid #f3aebb;font:600 12px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;cursor:pointer;transition:background .15s,color .15s,border-color .15s;}
+.sb-scout-link:hover,.sb-scout-link:focus-visible{background:var(--red);border-color:var(--red);color:#fff;outline:none;}
+@media(pointer:coarse){.sb-scout-link{min-height:36px;}}
+.scout-strip{display:flex;align-items:center;gap:12px;width:calc(100% - 24px);margin:0 12px 12px;padding:10px 12px;border-radius:9px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);color:#fff;font:inherit;text-align:left;cursor:pointer;transition:background .15s;}
+.scout-strip[hidden],.nxt-card.sec-collapsed .scout-strip{display:none;}
+.scout-strip:hover,.scout-strip:focus-visible{background:rgba(255,255,255,.2);outline:none;}
+.scout-strip-icon{width:34px;height:34px;border-radius:8px;background:#fff;color:var(--red);display:grid;place-items:center;font-size:16px;flex-shrink:0;}
+.scout-strip-text{min-width:0;display:flex;flex-direction:column;gap:1px;}
+.scout-strip-text b{font-size:13px;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.scout-strip-text span{font-size:11.5px;opacity:.82;}
+.scout-strip-go{margin-left:auto;font-size:12px;opacity:.75;}
+/* Two or more reports: a "Scouting reports" label over pills that wrap when they don't fit. */
+.scout-pills{margin:0 12px 12px;color:#fff;}
+.nxt-card.sec-collapsed .scout-pills{display:none;}
+.scout-pills-label{display:flex;align-items:center;gap:6px;margin-bottom:7px;font-size:11.5px;opacity:.85;}
+.scout-pills-row{display:flex;flex-wrap:wrap;gap:6px;}
+.scout-pill{display:inline-flex;align-items:center;gap:7px;max-width:100%;padding:4px 11px 4px 4px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#fff;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;transition:background .15s;}
+.scout-pill:hover,.scout-pill:focus-visible{background:rgba(255,255,255,.2);outline:none;}
+.scout-pill-icon{width:24px;height:24px;border-radius:50%;background:#fff;color:var(--red);display:grid;place-items:center;font-size:12px;flex-shrink:0;}
+.scout-pill-name{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.scout-pill .scout-strip-go{margin-left:0;font-size:11px;}
+@media (prefers-reduced-motion:reduce){.sb-scout-link,.scout-strip,.scout-pill{transition:none;}}
 .sb-game-teams{flex:1;display:flex;flex-direction:column;gap:5px;}
 .sb-game-team{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--text);justify-content:space-between;}
 .sb-bell{display:none;background:none;border:none;cursor:pointer;padding:2px 0 2px 6px;flex-shrink:0;color:#c4c4c4;transition:color .15s;line-height:0;}
@@ -480,11 +521,23 @@ a.t-row:hover{background:var(--border);border-radius:6px;}
 .team-modal-pool{position:relative;white-space:nowrap;}
 .team-modal-subtitle.has-location .team-modal-pool::before{content:"";position:absolute;left:-9px;top:50%;height:13px;transform:translateY(-50%);border-left:1px solid rgba(255,255,255,.33);}
 .team-modal-links{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;margin-bottom:6px;}
-.team-modal-links a{position:relative;display:inline-flex;align-items:center;gap:6px;min-height:32px;font-size:12px;font-weight:500;color:var(--text);text-decoration:none;}
+.team-modal-links a{position:relative;display:inline-flex;align-items:center;gap:5px;min-height:32px;font-size:12px;font-weight:500;color:#1d4ed8;text-decoration:none;}
 .team-modal-links a+a{padding-left:12px;}
 .team-modal-links a+a::before{content:'';position:absolute;left:0;height:13px;border-left:1px solid var(--border);}
-.team-modal-links a:hover{color:var(--red);}
-.team-modal-links .external-arrow{color:var(--muted);text-decoration:none;}
+.team-modal-link-label{text-decoration:underline dashed rgba(29,78,216,.55);text-underline-offset:3px;}
+.team-modal-links a:hover{color:#1e3a8a;}
+.team-modal-links a:hover .team-modal-link-label{text-decoration-color:currentColor;}
+.team-modal-links .external-arrow{color:#1d4ed8;opacity:.7;}
+/* Level badge + NorCal record on the left, profile links right-aligned on the same line; on a
+   phone the links move above the badge and record. */
+.team-modal-meta{display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;margin-bottom:10px;}
+.team-modal-facts{display:flex;align-items:center;flex-wrap:wrap;gap:8px;}
+.team-modal-record{font-size:12px;font-weight:600;color:var(--text);}
+.team-modal-meta .team-modal-links{margin:0 0 0 auto;justify-content:flex-end;}
+@media(max-width:560px){
+  .team-modal-meta{flex-direction:column;align-items:flex-start;}
+  .team-modal-meta .team-modal-links{order:-1;margin:0;justify-content:flex-start;}
+}
 @media(pointer:coarse){.team-modal-links{row-gap:12px;}.team-modal-links a::after{content:'';position:absolute;inset:-6px 0;}}
 .modal-close{background:rgba(255,255,255,.2);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .modal-close:hover{background:rgba(255,255,255,.35);}
@@ -915,7 +968,10 @@ a.t-row:hover{background:var(--border);border-radius:6px;}
 .sunday-rally-goal p{font-size:14px;line-height:1.5;color:var(--muted);}
 .sunday-rally-goal .sunday-rally-note{font-size:12px;margin-top:13px;}
 @media(max-width:380px){.sunday-rally h3{font-size:30px;}}
+
+
 </style>
+<link rel="stylesheet" href="/assets/scouting-report.css">
 </head>
 <body class="app-loading">
 <div class="app-loader" id="appLoader" role="status" aria-live="polite" aria-label="Loading the latest tournament data">
@@ -1031,8 +1087,12 @@ a.t-row:hover{background:var(--border);border-radius:6px;}
 
   <!-- NEXT GAME CARD -->
   <div class="span2 nxt-card" id="nextGameCard">
-    <div class="nxt-card-label">⚡ Next Game<button class="sec-toggle nxt" onclick="toggleSec(this)" aria-label="Toggle section">▾</button><span class="nxt-card-meta" id="nxtDatetime"></span></div>
+    <div class="nxt-card-label">⚡ Upcoming Games<button class="sec-toggle nxt" onclick="toggleSec(this)" aria-label="Toggle section">▾</button><span class="nxt-card-meta" id="nxtDatetime"></span></div>
     <hr class="nxt-card-divider">
+    <!-- One page per remaining game. Page 1 (#nxtPage0) is the next game and keeps the card's
+         original IDs; later pages are rendered by renderUpcomingPages(). -->
+    <div class="nxt-rail" id="nxtRail" aria-label="Upcoming games" aria-roledescription="carousel">
+    <div class="nxt-page" id="nxtPage0">
     <div class="nxt-card-body">
       <div class="nxt-teams">
         <div class="nxt-record-heading"><span>Team</span><span title="Tournament record">W–L</span><span><img src="/assets/gamechanger-logo.png" alt="GameChanger record" title="GameChanger season record"></span></div>
@@ -1057,8 +1117,18 @@ a.t-row:hover{background:var(--border);border-radius:6px;}
         </div>
       </div>
     </div>
+    <!-- Filled by setNextScoutingOpponents(): the next opponent's report, or every possible bracket opponent's. -->
+    <div id="scoutNextLinks" hidden></div>
     <!-- Bracket-only: win/lose next-opponent lines, filled by buildWickedPath() -->
     <div class="nxt-path" id="nxtPath" style="display:none"></div>
+    </div>
+    </div>
+    <div class="nxt-pager" id="nxtPager" hidden>
+      <button type="button" class="nxt-arrow" data-nxt-go="prev" aria-label="Previous game">‹</button>
+      <span class="nxt-dots" id="nxtDots" aria-hidden="true"></span>
+      <span class="nxt-count" id="nxtCount" aria-live="polite"></span>
+      <button type="button" class="nxt-arrow" data-nxt-go="next" aria-label="Next game">›</button>
+    </div>
   </div>
 
   <!-- SCOREBOARD -->
@@ -1321,20 +1391,19 @@ let POOLS = {};
 const liveScores = {};
 const teamRecords = {}; // id → {w, l, t}  (in-tournament pool record; t = ties)
 const teamSeason = {};  // id → "W-L" or "W-L-T" overall/season record (live, from API overallRecord)
-const teamClass = {};   // id → team level letter "B"/"C" (live, from API standings `class`)
 let wickedRank = null;  // Wicked's live CA-NorCal teamRanking
-// True if the name already shows the level (e.g. "Bay Stars 10B", "River Cats 10U B"),
-// so we only badge teams whose name lacks it (e.g. "Harbor Hawks 10U Black").
+// True if the name already shows the level (e.g. "Wicked 10B", "WV Slammers 10U B"),
+// so we only badge teams whose name lacks it (e.g. "Marin Tremors 10U Black").
 const nameHasLevel = (name, lvl) => new RegExp(`\\b\\d{1,2}\\s*U?\\s*-?\\s*${lvl}\\b`, 'i').test(name || '');
 // The level letter to badge beside a team, or '' for none. Judged against the name ON SCREEN:
 // an edited display name usually drops the "10C" the provider's name carried, so the badge has
-// to say it instead. `level` is the best the caller knows (this tournament's level, else the
-// team's registered one); failing that, the one written in the provider's own name
-// ("Example Magic 10C", "Example Smoke 10uC").
-function teamLevelBadge(teamId, rawName, level) {
+// to say it instead. The class itself is decided on the server (TEAM_DISPLAY[id].level: an admin's
+// class, else lib/opponents.js teamClassSource, NorCal's class ahead of this tournament's pool or
+// bracket, else the class in the provider's name). With no server entry (the local fixture) the
+// name on screen is the provider's own, so there is nothing to add.
+function teamLevelBadge(teamId, rawName) {
   const shown = TEAM_DISPLAY[teamId];
-  const providerName = shown?.providerName || rawName || '';
-  const known = level || (providerName.match(/\b\d{1,2}\s*U?\s*-?\s*([BCD])\b/i)?.[1] || '').toUpperCase();
+  const known = shown?.level || '';
   const displayed = shown?.name || splitRosterName(rawName || '').team;
   return known && !nameHasLevel(displayed, known) ? known : '';
 }
@@ -1352,11 +1421,6 @@ let AST_TEAM_NAME = '';
 function gameChangerAppUrl(url) {
   const gcTeamId = /^https:\/\/web\.gc\.com\/teams\/([^/?#]+)/i.exec(url || '')?.[1];
   return gcTeamId ? `https://web.gc.com/teams/${encodeURIComponent(gcTeamId)}/team` : '';
-}
-function gameChangerLinkHtml(teamId) {
-  const appUrl = gameChangerAppUrl(GAMECHANGER_TEAMS[teamId]);
-  return appUrl
-    ? `<a class="gc-team-link" href="${appUrl}" target="blank" title="Open team in GameChanger app" aria-label="Open team in GameChanger app"><img src="/assets/gamechanger-logo.png" alt=""></a>` : '';
 }
 function nextTeamNameHtml(nameHtml, teamId, teamName) {
   return `<span class="nxt-team-name-line">${nameHtml}</span>${gameChangerLocationHtml(teamId, teamName)}`;
@@ -1572,32 +1636,44 @@ function tourneyMachinePlacement(brackets, games, myId) {
   return null;
 }
 
-function wickedBracketPlacement(allGames, myLastGame) {
+// Mirrors teamPlacement in netlify/functions/lib/tm-placement.js (minus admin overrides, which
+// the server applies when it captures the placement). NorCal frames reference games by number with
+// a sign: +N is game N's winner, -N its loser; a losers-bracket game is itself numbered -N.
+function wickedBracketPlacement(allGames, myLastGame, bracket) {
   const iWon = myLastGame.topId === MY_ID
     ? (myLastGame.topScore ?? 0) > (myLastGame.botScore ?? 0)
     : (myLastGame.botScore ?? 0) > (myLastGame.topScore ?? 0);
 
   if (ACTIVE_PROVIDER === 'tourneymachine') return tourneyMachinePlacement(BRACKETS, allGames, MY_ID);
 
-  // Winner
+  const frame = bracket?.frame || [];
+  const refs = frame.flatMap(g => [g.topGame, g.botGame]).filter(n => n != null).map(Number);
+  const no = Math.abs(Number(myLastGame.gameNo));
+  // A later game takes this result: still playing, even before that game lists us.
+  if (refs.includes(iWon ? no : -no)) return null;
+  const fed = new Set(refs.map(n => Math.abs(n)));
+  const roots = frame.map(g => Math.abs(Number(g.gameNo))).filter(n => !fed.has(n));
+  const maxNo = roots.length === 1 ? roots[0]
+    : Math.max(...allGames.map(g => Math.abs(Number(g.gameNo)) || 0), ...frame.map(g => Math.abs(Number(g.gameNo)) || 0), (Number(bracket?.size) || 0) - 1);
+
+  // Winner — only of the final
   if (iWon) {
-    return { place: '1st Place' };
+    return no === maxNo ? { place: '1st Place' } : null;
   }
 
-  const maxNo = Math.max(...allGames.map(g => g.gameNo));
-
   // Runner-up
-  if (myLastGame.gameNo === maxNo) {
+  if (no === maxNo) {
     return { place: '2nd Place' };
   }
 
-  // Third place
-  if (maxNo - myLastGame.gameNo === 1) {
+  // Third place: eliminated in a game whose winner plays the final
+  const final = frame.find(g => Math.abs(Number(g.gameNo)) === maxNo);
+  if (final ? [final.topGame, final.botGame].map(n => Math.abs(Number(n))).includes(no) : maxNo - no === 1) {
     return { place: '3rd Place' };
   }
 
   // Everything else: compute placement dynamically
-  const placeNumber = maxNo - myLastGame.gameNo + 2;
+  const placeNumber = maxNo - no + 2;
   // Same mapping as before:
   //   maxNo → 2nd place loss
   //   maxNo-1 → 3rd place loss
@@ -1668,7 +1744,12 @@ function wxDir(deg){
 // from the feed) or — for placeholder fallbacks — a Date. Prefer the string: parsing a
 // zone-less time with new Date() interprets it in the *viewer's* timezone, so a non-Pacific
 // device would match the wrong hour here and show, e.g., the overnight low for a morning game.
-async function fetchWeather(game) {
+// `slot` (optional) is a later Upcoming Games page's {row, icon, temp, wind} elements; without it
+// the forecast fills page 1's #wxRow. One forecast download is reused for 10 minutes, so pages
+// for several games don't each call the API.
+async function fetchWeather(game, slot = null) {
+  const el = slot || { row:document.getElementById('wxRow'), icon:document.getElementById('wxIcon'),
+    temp:document.getElementById('wxTemp'), wind:document.getElementById('wxWind') };
   try {
     if (TOURNAMENT.venue.lat == null || TOURNAMENT.venue.lon == null) throw new Error('Venue coordinates unavailable');
     // Use best_match: auto-selects HRRR (3km) when available for US, falls back to GFS for days 3+
@@ -1677,9 +1758,15 @@ async function fetchWeather(game) {
       '&hourly=temperature_2m,windspeed_10m,winddirection_10m,weathercode' +
       '&daily=temperature_2m_min,temperature_2m_max,weathercode' +
       '&wind_speed_unit=mph&temperature_unit=fahrenheit&timezone=America%2FLos_Angeles&forecast_days=7';
-    const r = await fetch(url, {signal:AbortSignal.timeout(8000)});
-    const d = await r.json();
-    if(d.error) throw new Error(d.reason || 'API error');
+    // Pages rendered together share one in-flight request; a failed request isn't reused.
+    let entry = window._wxForecast;
+    if (!(entry && entry.url === url && Date.now() - entry.at < 10 * 60 * 1000)) {
+      entry = { url, at:Date.now(), data:fetch(url, {signal:AbortSignal.timeout(8000)}).then(r => r.json())
+        .then(json => { if (json.error) throw new Error(json.reason || 'API error'); return json; }) };
+      window._wxForecast = entry;
+      entry.data.catch(() => { if (window._wxForecast === entry) window._wxForecast = null; });
+    }
+    const d = await entry.data;
     // Link follows the same coords as the forecast (weather.com deep-links by lat/lon); an
     // explicit accuweatherUrl (admin override) wins if set.
     const wxUrl = TOURNAMENT.venue.accuweatherUrl
@@ -1694,10 +1781,10 @@ async function fetchWeather(game) {
       if (di < 0) throw new Error('day outside forecast window');
       const lo = Math.round(d.daily.temperature_2m_min[di]);
       const hi = Math.round(d.daily.temperature_2m_max[di]);
-      document.getElementById('wxIcon').innerHTML = wxLink(wxCode(d.daily.weathercode[di]));
-      document.getElementById('wxTemp').innerHTML = wxLink(`${lo}–${hi}°F`);
-      document.getElementById('wxWind').innerHTML = wxLink('Daytime range');
-      document.getElementById('wxRow').hidden = false;
+      el.icon.innerHTML = wxLink(wxCode(d.daily.weathercode[di]));
+      el.temp.innerHTML = wxLink(`${lo}–${hi}°F`);
+      el.wind.innerHTML = wxLink('Daytime range');
+      el.row.hidden = false;
       return;
     }
 
@@ -1729,24 +1816,25 @@ async function fetchWeather(game) {
     // Direction & condition code don't interpolate meaningfully → use the containing hour.
     const wdir = wxDir(d.hourly.winddirection_10m[idx]);
     const code = d.hourly.weathercode[idx];
-    document.getElementById('wxIcon').innerHTML = wxLink(wxCode(code));
-    document.getElementById('wxTemp').innerHTML = wxLink(`${temp}°F`);
-    document.getElementById('wxWind').innerHTML = wxLink(`${wdir} ${wind} mph`);
-    document.getElementById('wxRow').hidden = false;
+    el.icon.innerHTML = wxLink(wxCode(code));
+    el.temp.innerHTML = wxLink(`${temp}°F`);
+    el.wind.innerHTML = wxLink(`${wdir} ${wind} mph`);
+    el.row.hidden = false;
   } catch(e) {
     // No forecast yet for that day: hide the weather row entirely until it's in range, and forget
     // the target so the next 60s updateCountdown tick asks again (maybeFetchWeather skips a key it
     // has already fetched — without this the row would stay hidden until a reload).
     if (/outside forecast window/.test(e?.message || '')) {
-      document.getElementById('wxRow').hidden = true;
-      window._wxKey = null;
+      el.row.hidden = true;
+      // Retry later: page 1 on its next tick, a later page when it is next in view.
+      if (slot) el.row.dataset.wxRetry = '1'; else window._wxKey = null;
       return;
     }
     console.error('Weather fetch failed:', e);
-    document.getElementById('wxRow').hidden = false;
-    document.getElementById('wxIcon').textContent = '—';
-    document.getElementById('wxTemp').textContent = '';
-    document.getElementById('wxWind').textContent = 'Weather unavailable';
+    el.row.hidden = false;
+    el.icon.textContent = '—';
+    el.temp.textContent = '';
+    el.wind.textContent = 'Weather unavailable';
   }
 }
 // Fetch weather only when the target changes, so the card tracks the "next game" as it advances
@@ -1765,18 +1853,20 @@ function maybeFetchWeather(target) {
 }
 // Point the NEXT GAME card's venue link at a specific game's field (like the scoreboard
 // rows do), or reset it to the tournament venue when the field is unknown (TBD games).
+// A game's venue label and map link: its facility and field, else the tournament venue. Shared by
+// page 1 (setNextVenue) and the later Upcoming Games pages.
+function nextVenue(fac, field) {
+  if (!fac) return { label:TOURNAMENT.venue.name, href:TOURNAMENT.venue.mapsUrl };
+  const city = TOURNAMENT.venue.city ? ', ' + TOURNAMENT.venue.city : '';
+  return { label:field ? `${fac} · ${field}` : fac, href:`https://maps.google.com/?q=${encodeURIComponent(fac + city)}` };
+}
 function setNextVenue(fac, field) {
   const vEl = document.getElementById('nxtVenueName');
   const label = document.getElementById('nxtVenueLabel');
   if (!vEl || !label) return;
-  if (fac) {
-    const city = TOURNAMENT.venue.city ? ', ' + TOURNAMENT.venue.city : '';
-    label.textContent = field ? `${fac} · ${field}` : fac;
-    vEl.href = `https://maps.google.com/?q=${encodeURIComponent(fac + city)}`;
-  } else {
-    label.textContent = TOURNAMENT.venue.name;
-    vEl.href = TOURNAMENT.venue.mapsUrl;
-  }
+  const venue = nextVenue(fac, field);
+  label.textContent = venue.label;
+  vEl.href = venue.href;
 }
 
 // Live countdown to first pitch, shown only before the tournament's first game. Target is
@@ -1832,27 +1922,37 @@ function projectBracketSlot(level, seed, gameRef) {
   return null;
 }
 
-// Wicked's projected NEXT bracket game for a pool-fed event, from the frame + our seeding — fills the
-// NEXT GAME card when the live feed hasn't assigned Wicked's game yet. Only their FIRST bracket game
+// Wicked's NEXT bracket game for a pool-fed event, from the frame's assignment or our seeding — fills the
+// NEXT GAME card when the live feed has no bracket games for Wicked yet. Only their FIRST bracket game
 // is projected (their seed is a direct participant); once they've actually played, the live bracket
 // data drives the card instead (getWickedBracketStatus). Bracket-only events use wickedNextPaths.
 function wickedProjectedNextGame() {
   if (BRACKET_ONLY) return null;
+  // A frame the provider has already filled in names our first bracket game outright, in any bracket
+  // regime (NorCal posts Gold/Silver/Bronze assignments Saturday night, before any live bracket games).
+  for (const fb of BRACKETS) {
+    const fg = (fb.frame || []).find(x => x.topId === MY_ID || x.botId === MY_ID);
+    if (fg) {
+      const top = fg.topId === MY_ID;
+      return projectedGameFrom(fb, fg, Number(top ? fg.topSeed : fg.botSeed) || null, top);
+    }
+  }
   const b = BRACKETS[0];
-  // Scope to a single pool-fed bracket that everyone funnels into (the Tourney Machine case). Leaves
-  // NorCal's multi-tier / per-division seeding on its existing behavior.
+  // Otherwise project only a single pool-fed bracket that everyone funnels into (the Tourney Machine
+  // case). NorCal's multi-tier / per-division seeding waits for its assignments.
   if (!b || BRACKETS.length !== 1 || b.division || !(b.frame || []).length) return null;
   // Seeded projection: what buildBrackets stored, else derive it here from the global ranking (so this
   // works even if updateCountdown runs before buildBrackets, or off the committed fallback structure).
   const seeded = (BRACKET_SEEDED[b.level] && BRACKET_SEEDED[b.level].teams)
     || realOrPredicted(b.level, allTeamsGlobal || []);
   const wSeed = (seeded || []).findIndex(t => t && t.id === MY_ID) + 1;
-  // Find Wicked's first bracket game by ASSIGNED id (once Tourney Machine posts real teams the seed
-  // labels — "Pool A 3rd Place" — become team names, so topSeed/botSeed go null) or by projected seed.
-  const g = b.frame.find(x => x.topId === MY_ID || x.botId === MY_ID)
-        || (wSeed ? b.frame.find(x => Number(x.topSeed) === wSeed || Number(x.botSeed) === wSeed) : null);
+  // Find Wicked's first bracket game by projected seed (an assigned id was handled above).
+  const g = wSeed ? b.frame.find(x => Number(x.topSeed) === wSeed || Number(x.botSeed) === wSeed) : null;
   if (!g) return null;
-  const wickedIsTop = g.topId === MY_ID || (!!wSeed && Number(g.topSeed) === wSeed);
+  return projectedGameFrom(b, g, wSeed, Number(g.topSeed) === wSeed);
+}
+// The NEXT GAME card's view of our bracket game `g` in bracket `b`: the opponent slot and seeds.
+function projectedGameFrom(b, g, wSeed, wickedIsTop) {
   const oppId   = wickedIsTop ? g.botId   : g.topId;
   const oppName = wickedIsTop ? g.botName : g.topName;
   const oppSeed = Number(wickedIsTop ? g.botSeed : g.topSeed) || null;
@@ -1861,10 +1961,242 @@ function wickedProjectedNextGame() {
   // from the opponent's seed or feed (a "Winner of G#" until decided).
   const opp = (oppId && oppId !== MY_ID) ? { team: { id: oppId, name: oppName } }
     : projectBracketSlot(b.level, oppSeed, oppGame);
-  return { level: b.level, game: g, wSeed: wSeed || null, wickedIsTop, oppSeed, opp };
+  return { level: b.level, game: g, wSeed: wSeed || null, wickedIsTop, oppSeed, oppGame, opp };
 }
 
+// Every team that can still fill one side of a bracket game, as [{ id, name, proj }]: the assigned
+// team, else the decided feeder's winner/loser or the projected seed, else both sides of the
+// undecided feeder game, followed back through earlier feeders. Live bracket data wins over the frame.
+function bracketSlotCandidates(level, seed, id, name, gameRef, seen = new Set()) {
+  if (id) return id === MY_ID ? [] : [{ id:String(id), name, proj:false }];
+  const slot = projectBracketSlot(level, seed, gameRef);
+  if (slot?.team?.id) return slot.team.id === MY_ID ? [] : [{ id:String(slot.team.id), name:slot.team.name, proj:!!slot.proj }];
+  const no = Math.abs(Number(gameRef));
+  if (!no || seen.has(no)) return [];
+  seen.add(no);
+  const frameGame = (BRACKETS.find(b => b.level === level)?.frame || []).find(g => Math.abs(Number(g.gameNo)) === no) || {};
+  const liveGame = (bracketGameData[level] || []).find(g => g.gameNo != null && Math.abs(g.gameNo) === no) || {};
+  const side = s => bracketSlotCandidates(level, parseInt(liveGame[s+'Seed'] ?? frameGame[s+'Seed']) || null,
+    liveGame[s+'Id'] || frameGame[s+'Id'] || null, liveGame[s+'Name'] || frameGame[s+'Name'],
+    liveGame[s+'Game'] ?? frameGame[s+'Game'] ?? null, seen);
+  const all = [...side('top'), ...side('bot')];
+  return all.filter((t, i) => all.findIndex(x => x.id === t.id) === i);
+}
+// The opponents page 1 offers scouting links for: [{ id, note }] where note is null for a confirmed
+// opponent, else why the team is listed ("Projected opponent", "Possible opponent · Winner of G3").
+function bracketScoutTargets(candidates, label) {
+  if (candidates.length === 1 && !candidates[0].proj && !label) return [{ id:candidates[0].id, note:null }];
+  return candidates.map(t => ({ id:t.id, note:t.proj && candidates.length === 1 ? 'Projected opponent' : 'Possible opponent' + (label ? ' · ' + label : '') }));
+}
+
+let SCOUT_SUMMARIES=[],SCOUT_NEXT_KEY=null;
+// Contents of an Upcoming Games scouting link, shared by page 1 and the later pages.
+function scoutStripInner(name, note){
+  return '<span class="scout-strip-icon"><i class="fa-sharp fa-regular fa-clipboard" aria-hidden="true"></i></span><span class="scout-strip-text"><b>'+historyEsc(name?'Scout '+name:'Scouting report')+'</b><span>'+historyEsc(note||'Hitters, pitching and how they score')+'</span></span><i class="fa-solid fa-chevron-right scout-strip-go" aria-hidden="true"></i>';
+}
+// Scouting links for an Upcoming Games page, for the targets that have a report. `targets` is
+// [{ id, note }]. One report gets the full-width strip (with its note); two or more get a
+// "Scouting reports" label over a row of pills that wraps when they don't fit. Returns the markup and
+// a key that changes when the set does.
+function scoutStrips(targets){
+  const shown=(targets||[]).map(t=>({...t,id:String(t.id),report:SCOUT_SUMMARIES.find(r=>String(r.id)===String(t.id))})).filter(t=>t.report);
+  const key=shown.map(t=>t.id+':'+(t.note||'')).join('|');
+  const label=t=>`Open the scouting report for ${historyEsc(t.report.name)}${t.note?' ('+historyEsc(t.note)+')':''}`;
+  if(shown.length===1){
+    const t=shown[0];
+    return { key, html:`<button type="button" class="scout-strip" data-scout-open="${historyEsc(t.id)}" aria-label="${label(t)}">${scoutStripInner(t.report.name,t.note)}</button>` };
+  }
+  if(!shown.length) return { key, html:'' };
+  const pills=shown.map(t=>`<button type="button" class="scout-pill" data-scout-open="${historyEsc(t.id)}" aria-label="${label(t)}"><span class="scout-pill-icon"><i class="fa-sharp fa-regular fa-clipboard" aria-hidden="true"></i></span><span class="scout-pill-name">${historyEsc(t.report.name)}</span><i class="fa-solid fa-chevron-right scout-strip-go" aria-hidden="true"></i></button>`).join('');
+  return { key, html:`<div class="scout-pills"><div class="scout-pills-label"><i class="fa-sharp fa-regular fa-clipboard" aria-hidden="true"></i>Scouting reports</div><div class="scout-pills-row">${pills}</div></div>` };
+}
+// Page 1's scouting links.
+function setNextScoutingOpponents(targets){
+  const {key,html}=scoutStrips(targets);
+  if(SCOUT_NEXT_KEY!==null&&SCOUT_NEXT_KEY!==key&&!document.getElementById('scoutModal').hidden)closeScoutingReport();
+  SCOUT_NEXT_KEY=key;
+  const box=document.getElementById('scoutNextLinks');
+  box.hidden=!html;
+  box.innerHTML=html;
+}
+// An opponent row from a projectBracketSlot() result (used when the live feed hasn't posted the real
+// matchup yet): a projected team gets a "proj." tag, a decided feeder its record, and an undecided
+// feed / nothing falls back to a neutral "Winner of G#" / TBD chip.
+function bracketOppRowHtml(slot) {
+  return (slot && slot.team && slot.team.id)
+    ? nextTeamRowHtml(slot.team.id, slot.team.name, null, !!slot.proj)
+    : nextTeamRowHtml(null, (slot && slot.label) || 'TBD');
+}
+// A bracket game with live data merged over its frame game. NorCal's live bracket games carry no
+// feeds (topGame/botGame), so a "Winner of G#" slot is only known from the frame.
+function bracketGameWithFrame(frameGame, liveGame) {
+  const game = { ...frameGame };
+  for (const [k, v] of Object.entries(liveGame || {})) if (v != null && v !== '') game[k] = v;
+  return game;
+}
+// The bracket games after game `gameNo` that we play if we keep winning, as [{ game, wickedIsTop }]:
+// each game's winner feeds (+N) the next, through the frame, with live data merged over the frame.
+// A losers-bracket game (negative number) has no path, since its feeds can't be told apart.
+function bracketWinningPath(level, gameNo) {
+  const frame = BRACKETS.find(b => b.level === level)?.frame || [];
+  const live = bracketGameData[level] || [];
+  const path = [], seen = new Set();
+  let no = Number(gameNo);
+  while (no > 0 && !seen.has(no)) {
+    seen.add(no);
+    const next = frame.find(g => Number(g.topGame) === no || Number(g.botGame) === no);
+    if (!next) break;
+    const liveGame = live.find(g => g.gameNo != null && Number(g.gameNo) === Number(next.gameNo));
+    const game = bracketGameWithFrame(next, liveGame);
+    path.push({ game, wickedIsTop: Number(next.topGame) === no });
+    no = Number(next.gameNo);
+  }
+  return path;
+}
+// ============================================================
+// UPCOMING GAMES PAGER
+// ============================================================
+// Page 1 (#nxtPage0) is the next game, rendered in place by updateCountdown(). Each later game
+// gets its own page here. Later pages are rebuilt only when their content changes, so the 60s
+// refresh neither resets the reader's page nor re-fetches every forecast.
+let NXT_LATER_HTML = null, NXT_INDEX = 0, NXT_GAMES_KEY = null;
+// Weather target per later page, for retrying a forecast that was out of range.
+const NXT_WX_TARGETS = new WeakMap();
+// Page 1's record heading is the one copy; later pages reuse its markup.
+const NXT_RECORD_HEADING = document.querySelector('#nxtPage0 .nxt-record-heading').outerHTML;
+// Our games still on the card, in time order. A game stays for 30 minutes after its start time,
+// so the card keeps showing a game that has just begun before moving on.
+function upcomingMyGames(games, now) {
+  const grace = 30 * 60 * 1000;
+  return games.map(g => ({ ...g, dt:new Date(g.t) })).filter(g => g.dt.getTime() + grace > now.getTime());
+}
+// A later page's markup. Away team (visitor) listed first, home team second, as on page 1.
+// `condition` tags a game we only play if we win an earlier one ("If we win G4"), in the record
+// heading's empty first cell.
+function upcomingPageHtml({ key, meta, wickedIsHome, oppRow, venue, scoutTargets, condition = null }) {
+  const wickedRow = nextTeamRowHtml(MY_ID, MY_NAME);
+  const heading = condition ? NXT_RECORD_HEADING.replace('<span></span>', `<span><span class="nxt-cond">${historyEsc(condition)}</span></span>`) : NXT_RECORD_HEADING;
+  return `<div class="nxt-page" data-meta="${historyEsc(meta)}" data-game="${historyEsc(key)}">
+    <div class="nxt-card-body">
+      <div class="nxt-teams">${heading}<div class="nxt-team-row">${wickedIsHome ? oppRow : wickedRow}</div><div class="nxt-team-row">${wickedIsHome ? wickedRow : oppRow}</div></div>
+      <div class="nxt-details">
+        <div class="nxt-venue-block"><i class="fa-solid fa-location-dot nxt-venue-pin" aria-hidden="true"></i><div><a class="nxt-link nxt-venue-name" href="${historyEsc(venue.href || '#')}" target="blank">${historyEsc(venue.label || 'Venue TBD')}</a><div class="nxt-venue-city">${historyEsc(TOURNAMENT.venue.city || '')}</div></div></div>
+        <div class="nxt-weather-row" hidden><div class="nxt-weather-icon"></div><div><div class="nxt-weather-temp"></div><div class="nxt-weather-wind"></div></div></div>
+      </div>
+    </div>${scoutStrips(scoutTargets).html}</div>`;
+}
+// One later page for one of our pool games: its key, header text, forecast target, and markup.
+function upcomingPage(g) {
+  const wickedIsHome = g.hid === MY_ID;
+  const oppId = wickedIsHome ? g.aid : g.hid, opp = wickedIsHome ? g.an : g.hn;
+  const dt = new Date(g.t);
+  const meta = dt.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) + '  ·  ' + dt.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
+  const html = upcomingPageHtml({ key:g.key, meta, wickedIsHome, oppRow:nextTeamRowHtml(oppId, opp),
+    venue:nextVenue(g.facName || g.fac, g.field), scoutTargets:[{ id:oppId, note:null }] });
+  return { key:g.key, meta, wx:g.t, html };
+}
+// One later page for a bracket game on our winning path (from bracketWinningPath). The opponent is
+// projected like page 1's: the assigned team, else a decided feeder or seed, else "Winner of G#" with a
+// scouting link for every team that can still get there. Our side is fed by the game before it on
+// the path, which we have to win to play this one; the page says so.
+function bracketUpcomingPage(level, g, wickedIsTop) {
+  const oppId = wickedIsTop ? g.botId : g.topId, oppName = wickedIsTop ? g.botName : g.topName;
+  const oppSeed = parseInt(wickedIsTop ? g.botSeed : g.topSeed) || null, oppGame = (wickedIsTop ? g.botGame : g.topGame) ?? null;
+  const slot = oppId ? { team:{ id:oppId, name:oppName } } : projectBracketSlot(level, oppSeed, oppGame);
+  // Higher seed (lower #) listed second; a feed has no seed yet.
+  const wickedIsHome = (parseInt(wickedIsTop ? g.topSeed : g.botSeed) || 99) <= (oppSeed || 99);
+  const dt = g.time ? new Date(g.time) : null, fallbackTs = BRACKET_TIMES[level]?.[g.gameNo];
+  const day = dt ? dt.toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'}) : BRACKET_DATE_LABEL;
+  const ts = dt ? dt.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}) : (fallbackTs || 'Time TBD');
+  const label = BRACKET_LABELS[level] || '';
+  const meta = `${day}  ·  ${ts}${label ? '  ·  ' + label : ''}`;
+  const key = g.key || `${level}:${g.gameNo}`;
+  const feeder = Number(wickedIsTop ? g.topGame : g.botGame);
+  const html = upcomingPageHtml({ key, meta, wickedIsHome, oppRow:bracketOppRowHtml(slot),
+    condition:feeder > 0 ? `If we win G${feeder}` : null,
+    venue:nextVenue(g.facName || g.fac, g.field),
+    scoutTargets:bracketScoutTargets(bracketSlotCandidates(level, oppSeed, oppId, oppName, oppGame), slot?.label || null) });
+  const wx = g.time || (fallbackTs ? new Date(`${TOURNAMENT.bracketDate} ${fallbackTs}`) : { day: TOURNAMENT.bracketDate });
+  return { key, meta, wx, html };
+}
+// A later page's weather elements, in the shape fetchWeather() fills.
+function upcomingWeatherSlot(page) {
+  const row = page.querySelector('.nxt-weather-row');
+  return { row, icon:row.querySelector('.nxt-weather-icon'), temp:row.querySelector('.nxt-weather-temp'), wind:row.querySelector('.nxt-weather-wind') };
+}
+// `pages` are the later pages (upcomingPage / bracketUpcomingPage); `firstKey` identifies page 1's
+// game. When the set of games changes (a game drops off 30 minutes after its start), the card is
+// rebuilt and returns to page 1; other changes keep the reader's page.
+function renderUpcomingPages(pages, firstKey) {
+  const rail = document.getElementById('nxtRail'), page0 = document.getElementById('nxtPage0');
+  // Page 1's header text, as updateCountdown() just set it.
+  page0.dataset.meta = document.getElementById('nxtDatetime').textContent;
+  const gamesKey = [firstKey, ...pages.map(p => p.key)].join('|');
+  if (NXT_GAMES_KEY !== null && gamesKey !== NXT_GAMES_KEY) rail.scrollLeft = 0;
+  NXT_GAMES_KEY = gamesKey;
+  const html = pages.map(p => p.html).join('');
+  if (html !== NXT_LATER_HTML) {
+    rail.querySelectorAll('.nxt-page:not(#nxtPage0)').forEach(node => node.remove());
+    page0.insertAdjacentHTML('afterend', html);
+    NXT_LATER_HTML = html;
+    rail.querySelectorAll('.nxt-page:not(#nxtPage0)').forEach((node, i) => {
+      NXT_WX_TARGETS.set(node, pages[i].wx);
+      fetchWeather(pages[i].wx, upcomingWeatherSlot(node));
+    });
+  }
+  syncUpcomingPager();
+}
+// Updates the dots, counter, arrows and header for the page in view, keeps keyboard focus out of
+// pages that are off screen, and retries the page's forecast if it was out of range.
+function syncUpcomingPager() {
+  const rail = document.getElementById('nxtRail'), pages = [...rail.querySelectorAll('.nxt-page')];
+  const n = pages.length;
+  NXT_INDEX = Math.max(0, Math.min(n - 1, Math.round(rail.scrollLeft / (rail.clientWidth || 1))));
+  document.getElementById('nxtPager').hidden = n < 2;
+  rail.tabIndex = n > 1 ? 0 : -1;
+  const dots = document.getElementById('nxtDots');
+  if (dots.children.length !== n) dots.innerHTML = '<i></i>'.repeat(n);
+  [...dots.children].forEach((dot, i) => dot.classList.toggle('on', i === NXT_INDEX));
+  document.getElementById('nxtCount').textContent = n > 1 ? `${NXT_INDEX + 1} / ${n}` : '';
+  document.querySelector('[data-nxt-go="prev"]').disabled = NXT_INDEX === 0;
+  document.querySelector('[data-nxt-go="next"]').disabled = NXT_INDEX >= n - 1;
+  pages.forEach((page, i) => { page.inert = i !== NXT_INDEX; });
+  const current = pages[NXT_INDEX];
+  if (current?.dataset.meta != null) document.getElementById('nxtDatetime').textContent = current.dataset.meta;
+  // Page 1 retries on its own (maybeFetchWeather). A later page retries when it comes into view
+  // and on each refresh while it stays in view; the shared forecast download keeps this cheap.
+  if (current && current.id !== 'nxtPage0' && current.querySelector('.nxt-weather-row')?.dataset.wxRetry) {
+    delete current.querySelector('.nxt-weather-row').dataset.wxRetry;
+    fetchWeather(NXT_WX_TARGETS.get(current), upcomingWeatherSlot(current));
+  }
+}
+function goToUpcomingPage(index) {
+  const rail = document.getElementById('nxtRail'), n = rail.querySelectorAll('.nxt-page').length;
+  const target = Math.max(0, Math.min(n - 1, index));
+  rail.scrollTo({ left:target * rail.clientWidth, behavior:matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+}
+(function initUpcomingPager() {
+  const rail = document.getElementById('nxtRail');
+  let settle = null;
+  rail.addEventListener('scroll', () => { clearTimeout(settle); settle = setTimeout(syncUpcomingPager, 80); });
+  rail.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); goToUpcomingPage(NXT_INDEX + (e.key === 'ArrowRight' ? 1 : -1)); }
+  });
+  document.getElementById('nxtPager').addEventListener('click', e => {
+    const arrow = e.target.closest('[data-nxt-go]');
+    if (arrow) goToUpcomingPage(NXT_INDEX + (arrow.dataset.nxtGo === 'next' ? 1 : -1));
+  });
+  rail.addEventListener('click', e => {
+    const scout = e.target.closest('[data-scout-open]');
+    if (!scout) return;
+    const report = SCOUT_SUMMARIES.find(r => String(r.id) === scout.dataset.scoutOpen);
+    if (report) openScoutingReport(scout.dataset.scoutOpen, contextQuery(), report.name);
+  });
+})();
+
 function updateCountdown() {
+  let scoutTargets=[], laterPages=[], firstKey=null;
+  try {
   if (SEASON_OVER) return;
   if (SCHEDULE_PENDING) {
     // No games yet: our team vs an opponent TBD on the first tournament day, at the tournament's
@@ -1881,13 +2213,10 @@ function updateCountdown() {
     return;
   }
   const now = new Date();
-  const upcomingGames = MY_GAMES.map(g=>({...g,dt:new Date(g.t)})).filter(g=>g.dt>now);
-  // Render an opponent slot from a projectBracketSlot() result (used when the live feed hasn't posted
-  // the real matchup yet): a projected team gets a "proj." tag, a decided feeder its record, and an
-  // undecided feed / nothing falls back to a neutral "Winner of G#" / TBD chip.
-  const projOppRow = opp => (opp && opp.team && opp.team.id)
-    ? nextTeamRowHtml(opp.team.id, opp.team.name, null, !!opp.proj)
-    : nextTeamRowHtml(null, (opp && opp.label) || 'TBD');
+  const upcomingGames = upcomingMyGames(MY_GAMES, now);
+  const projOppRow = bracketOppRowHtml;
+  // Later pages for a bracket game: the games we play next if we keep winning.
+  const pathPages = (level, g) => bracketWinningPath(level, g.gameNo).map(p => bracketUpcomingPage(level, p.game, p.wickedIsTop));
 
   if (!upcomingGames.length) {
     const nowDatePT = now.toLocaleDateString('en-CA', {timeZone:'America/Los_Angeles'});
@@ -1897,8 +2226,10 @@ function updateCountdown() {
     let savedPlacement = null;
     try { savedPlacement = JSON.parse(localStorage.getItem(PLACEMENT_KEY)); } catch {}
 
-    // Live bracket status is only meaningful on Sunday (bracketGameData only fetched then)
-    const bs = isSunday ? getWickedBracketStatus() : null;
+    // Live bracket status from the snapshot: on the bracket day, and before it once pool play is
+    // over (so a bracket posted Saturday night shows its real matchup). It is null until our
+    // bracket game is assigned, which leaves the projection below in place.
+    const bs = (isSunday || nowDatePT < TOURNAMENT.bracketDate) ? getWickedBracketStatus() : null;
 
     function showPlacement(bracketLabel, p, dateLabel) {
       document.getElementById('nxtDatetime').textContent = dateLabel;
@@ -1913,7 +2244,7 @@ function updateCountdown() {
 
     // 1. Sunday + live bracket run complete → detect & save placement
     if (bs && bs.upcoming.length === 0 && bs.lastGame) {
-      const p = wickedBracketPlacement(bs.games, bs.lastGame);
+      const p = wickedBracketPlacement(bs.games, bs.lastGame, BRACKETS.find(b => b.level === bs.level));
       if (p) {
         const bl = p.label || BRACKET_LABELS[bs.level];
         try { localStorage.setItem(PLACEMENT_KEY, JSON.stringify({ label:bl, ...p })); } catch {}
@@ -1930,7 +2261,9 @@ function updateCountdown() {
 
     // 3. Sunday + next bracket game known (opponent may still be TBD)
     if (bs && bs.nextGame) {
-      const g = bs.nextGame;
+      // The frame supplies the opponent's feed ("Winner of G#"), which the live game lacks.
+      const frameGame = (BRACKETS.find(b => b.level === bs.level)?.frame || []).find(f => Number(f.gameNo) === Number(bs.nextGame.gameNo));
+      const g = bracketGameWithFrame(frameGame, bs.nextGame);
       const wickedIsTop = g.topId === MY_ID;
       const oppId   = wickedIsTop ? g.botId   : g.topId;
       const oppName = (wickedIsTop ? g.botName : g.topName) || 'TBD';
@@ -1941,9 +2274,11 @@ function updateCountdown() {
       const wickedRow2 = nextTeamRowHtml(MY_ID, MY_NAME);
       // Opponent slot: the confirmed assignment if TM has posted it, else project it from the frame +
       // seeding (a decided feeder resolves to the real team; an undecided one shows "Winner of G#").
-      const oppRow2 = oppId
-        ? nextTeamRowHtml(oppId, oppName)
-        : projOppRow(projectBracketSlot(bs.level, parseInt(wickedIsTop ? g.botSeed : g.topSeed) || null, (wickedIsTop ? g.botGame : g.topGame) ?? null));
+      const oppSeed2 = parseInt(wickedIsTop ? g.botSeed : g.topSeed) || null, oppGame2 = (wickedIsTop ? g.botGame : g.topGame) ?? null;
+      const oppSlot2 = oppId ? null : projectBracketSlot(bs.level, oppSeed2, oppGame2);
+      const oppRow2 = oppId ? nextTeamRowHtml(oppId, oppName) : projOppRow(oppSlot2);
+      // Scouting: the confirmed opponent, else every team that can still fill the slot.
+      scoutTargets = bracketScoutTargets(bracketSlotCandidates(bs.level, oppSeed2, oppId, oppName, oppGame2), oppSlot2?.label || null);
       document.getElementById('nxtHome').innerHTML = wickedIsHome2 ? oppRow2 : wickedRow2;
       document.getElementById('nxtOpp').innerHTML = wickedIsHome2 ? wickedRow2 : oppRow2;
       setNextVenue(g.facName || g.fac, g.field);
@@ -1956,6 +2291,8 @@ function updateCountdown() {
         : (fallbackTs ? new Date(`${TOURNAMENT.bracketDate} ${fallbackTs}`) : { day: TOURNAMENT.bracketDate });
       document.getElementById('nxtDatetime').textContent = `${BRACKET_DATE_LABEL}  ·  ${ts}  ·  ${bl}`;
       maybeFetchWeather(wxTarget);
+      firstKey = g.key || `${bs.level}:${g.gameNo}`;
+      laterPages = pathPages(bs.level, g);
       return;
     }
 
@@ -1973,6 +2310,7 @@ function updateCountdown() {
     if (proj && proj.opp && (proj.opp.team || proj.opp.label)) {
       const wickedRow = nextTeamRowHtml(MY_ID, MY_NAME);
       const oppRow = projOppRow(proj.opp);
+      scoutTargets = bracketScoutTargets((proj.opp.team?.id ? [{ id:String(proj.opp.team.id), name:proj.opp.team.name, proj:!!proj.opp.proj }] : bracketSlotCandidates(proj.level, proj.oppSeed, null, null, proj.oppGame)), proj.opp.label || null);
       const wickedIsHome = proj.wSeed <= (proj.oppSeed || 99);   // higher seed (lower #) listed second
       document.getElementById('nxtHome').innerHTML = wickedIsHome ? oppRow : wickedRow;
       document.getElementById('nxtOpp').innerHTML = wickedIsHome ? wickedRow : oppRow;
@@ -1982,6 +2320,8 @@ function updateCountdown() {
       const plbl = BRACKET_LABELS[proj.level] || BRACKETS[0]?.label || '';
       document.getElementById('nxtDatetime').textContent = `${BRACKET_DATE_LABEL}  ·  ${pts}${plbl ? '  ·  '+plbl : ''}`;
       maybeFetchWeather(proj.game.time || (wickedBracketFallback?.time ? new Date(`${TOURNAMENT.bracketDate} ${wickedBracketFallback.time}`) : { day: TOURNAMENT.bracketDate }));
+      firstKey = proj.game.key || `${proj.level}:${proj.game.gameNo}`;
+      laterPages = pathPages(proj.level, proj.game);
       return;
     }
 
@@ -2007,6 +2347,7 @@ function updateCountdown() {
   const opp = wickedIsHome ? next.an : next.hn;
   const dt = new Date(next.t);
   const oppId = wickedIsHome ? next.aid : next.hid;
+  scoutTargets = [{ id:oppId, note:null }];
   const wickedRow = nextTeamRowHtml(MY_ID, MY_NAME);
   const oppRow = nextTeamRowHtml(oppId, opp);
   // Away team (lower seed / visitor) listed first, home team second
@@ -2017,6 +2358,11 @@ function updateCountdown() {
   document.getElementById('nxtDatetime').textContent = ds + '  ·  ' + ts;
   setNextVenue(next.facName || next.fac, next.field);
   maybeFetchWeather(next.t);
+  // Later pages: the rest of our scheduled games. Bracket games appear once pool play is over, as
+  // pages for our winning path (above).
+  firstKey = next.key;
+  laterPages = upcomingGames.slice(1).map(upcomingPage);
+  } finally { setNextScoutingOpponents(scoutTargets); renderUpcomingPages(laterPages, firstKey); }
 }
 
 // ============================================================
@@ -2100,14 +2446,17 @@ function sortStandingsTeams(teams, rankField = 'officialRank', preferMine = fals
 }
 
 // A sister division cannot enlarge a two-team record tie in this division.
+// Unresolved ties put our team first, as the standings table does, so a team listed first
+// (e.g. everyone 0–0 before the event) isn't projected into the last bracket by id order.
 function sortBracketTeams(teams) {
-  if (!BRACKETS.some(b => b.division)) return sortStandingsTeams(teams);
+  const sort = rows => sortStandingsTeams(rows, 'officialRank', true);
+  if (!BRACKETS.some(b => b.division)) return sort(teams);
   const divisions = new Map();
   for (const t of teams) {
     if (!divisions.has(t.level)) divisions.set(t.level, []);
     divisions.get(t.level).push(t);
   }
-  return [...divisions.values()].flatMap(rows => sortStandingsTeams(rows));
+  return [...divisions.values()].flatMap(sort);
 }
 
 function buildAllStandings(liveData) {
@@ -2139,7 +2488,6 @@ function buildAllStandings(liveData) {
       // it's actually assigned to here (e.g. a C-rated team placed in the B pool/bracket).
       // Trusting ld.class first would silently drop such a team from its real bracket.
       const level = t.level || (String(ld.class||'').match(/([A-D])\s*$/)||[])[1] || null; // "10B" -> "B"
-      if (level) teamClass[t.id] = level;
       if (t.id === MY_ID && ld.teamRanking != null) wickedRank = ld.teamRanking;
       // Default to NorCal's published pool record/PF/PA. If the team has any admin score
       // override in its pool, recompute the whole pool from merged scores so every row is comparable
@@ -2201,7 +2549,7 @@ function buildAllStandings(liveData) {
       const rdc = rd>0?'rdp':rd<0?'rdn':'';
       const brk = bracketMap[t.id] || {label:`${trophyIcon(3)} Bronze`,cls:'brkt-b'};
       const srBadge = t.sr ? `<div class="s-rec-line"><span class="s-season has-rec" title="NorCal season record (all tournaments)">${historyEsc(t.sr)} NorCal</span></div>` : '';
-      const lvl = teamLevelBadge(t.id, t.name, t.level || t.registeredLevel);
+      const lvl = teamLevelBadge(t.id, t.name);
       const lvlBadge = lvl ? `<span class="s-season" title="Team level">${historyEsc(lvl)}</span>` : '';
       const nameClass = t.me ? ' me' : t.sister ? ' sister' : '';
       const prefix = t.me ? '⭐ ' : t.sister ? '🟣 ' : '';
@@ -2322,6 +2670,14 @@ function bracketGameScore(level, seedA, seedB) {
 // ============================================================
 // BRACKET PREDICTION
 // ============================================================
+// A "Scout" link after a bracket team's name, styled like the name link, when the team has a report.
+// The GameChanger link lives in the team modal instead. Both are inline <a>s, not buttons: a button is
+// an inline block, so a wrapped name would fill the line and push the link onto its own line. With no
+// breaking space between them (the dot is padded with &nbsp;), "Scout" stays on the name's last line.
+function bracketScoutLinkHtml(teamId) {
+  const report = SCOUT_SUMMARIES.find(r => String(r.id) === String(teamId));
+  return report ? `<span class="bt-scout-sep" aria-hidden="true">&nbsp;·&nbsp;</span><a href="#" role="button" class="team-link bt-scout" onclick="openScoutingReport(${jsArg(teamId)},contextQuery(),${jsArg(report.name)});return false" aria-label="Scouting report for ${historyEsc(report.name)}">Scout</a>` : '';
+}
 // score (optional) = { val, cls } → shown right-aligned after the team name.
 function btSlot(team, globalSeed, score, pool = null) {
   if(!team) return `<div class="bt tbd">TBD</div>`;
@@ -2331,7 +2687,7 @@ function btSlot(team, globalSeed, score, pool = null) {
   const cls = isMe ? ' me' : '';
   const seedLabel = globalSeed != null ? `${pool ? `Pool ${historyEsc(pool)} ` : ''}#${globalSeed} ` : '';
   const nameEl = team.id
-    ? `<button class="team-link" style="font-size:inherit" onclick="showTeam(${jsArg(team.id)})">${prefix}${seedLabel}${historyEsc(team.name)}</button>${gameChangerLinkHtml(team.id)}`
+    ? `<a href="#" role="button" class="team-link" style="font-size:inherit" onclick="showTeam(${jsArg(team.id)});return false">${prefix}${seedLabel}${historyEsc(team.name)}</a>${bracketScoutLinkHtml(team.id)}`
     : `${prefix}${seedLabel}${historyEsc(team.name)}`;
   const scoreEl = score ? `<span class="bt-score ${score.cls}">${score.val}</span>` : '';
   return `<div class="bt${cls}"><span class="bt-name">${nameEl}</span>${scoreEl}</div>`;
@@ -3310,7 +3666,7 @@ function historyStandingsHtml(snap,myId,sisterId) {
       const computed=historicalPoolRecord(snap,pool,team.id);
       const parts=String(s.record||'').split('-').map(n=>parseInt(n,10)||0);
       return {id:team.id,name:s.team||team.name,w:s.win??parts[0]??computed.w,l:s.loss??parts[1]??computed.l,t:s.tie??parts[2]??computed.t,
-        rf:s.PF??computed.rf,ra:s.PA??computed.ra,rank:s.officialRank??null};
+        rf:s.PF??computed.rf,ra:s.PA??computed.ra,rank:s.officialPoolRank??s.officialRank??null};
     }).sort((a,b)=>{
       if(a.rank!=null&&b.rank!=null)return a.rank-b.rank;
       if(b.w!==a.w)return b.w-a.w;
@@ -3631,7 +3987,7 @@ function setTeamModalHeader(title, teamId, teamName, poolLabel = '') {
   subtitle.hidden = !location && !poolLabel;
 }
 function teamModalLinksHtml(teamId, providerHref = '', providerName = '') {
-  const link = (url, label) => `<a href="${historyEsc(url)}" target="blank" rel="noopener">${historyEsc(label)} <span class="external-arrow" aria-hidden="true">↗</span></a>`;
+  const link = (url, label) => `<a href="${historyEsc(url)}" target="blank" rel="noopener"><span class="team-modal-link-label">${historyEsc(label)}</span><span class="external-arrow" aria-hidden="true">↗</span></a>`;
   const gcUrl = gameChangerAppUrl(GAMECHANGER_TEAMS[teamId]);
   const links = (providerHref ? link(providerHref, providerName) : '') + (gcUrl ? link(gcUrl, 'GameChanger') : '');
   return links ? `<div class="team-modal-links">${links}</div>` : '';
@@ -3738,8 +4094,8 @@ function showTeam(teamId) {
   }
 
   const srVal = teamSeason[teamId] || foundTeam.sr;
-  const srInfo = srVal ? `<span style="font-size:12px;color:var(--red);font-weight:600">📊 ${historyEsc(srVal)} NorCal record</span>` : '';
-  const lvl = teamLevelBadge(teamId, foundTeam.name, teamClass[teamId] || foundTeam.level || foundTeam.registeredLevel);
+  const srInfo = srVal ? `<span class="team-modal-record">${historyEsc(srVal)} NorCal</span>` : '';
+  const lvl = teamLevelBadge(teamId, foundTeam.name);
   const lvlInfo = lvl ? `<span class="pool-badge" title="Team level" style="background:#f3f4f6;color:var(--muted)">${historyEsc(lvl)}</span>` : '';
   const sourceTeamId = teamId === MY_ID && ACTIVE_SOURCE_TEAM_ID ? ACTIVE_SOURCE_TEAM_ID : teamId;
   const teamHref = ACTIVE_PROVIDER === 'tourneymachine' && ACTIVE_SOURCE_URL
@@ -3748,8 +4104,7 @@ function showTeam(teamId) {
   const profileLinks = teamModalLinksHtml(teamId, teamHref, ACTIVE_PROVIDER === 'tourneymachine' ? 'Tourney Machine' : 'NorCal');
   const bracketNote = bktRows.length ? '' : `<p style="font-size:11px;color:var(--muted);margin-top:10px">Bracket play ${BRACKET_DATE_LABEL} · times TBD based on pool standings</p>`;
   document.getElementById('modalBody').innerHTML = `
-    ${(lvlInfo || srInfo) ? `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">${lvlInfo}${srInfo}</div>` : ''}
-    ${profileLinks}
+    ${(lvlInfo || srInfo || profileLinks) ? `<div class="team-modal-meta">${(lvlInfo || srInfo) ? `<div class="team-modal-facts">${lvlInfo}${srInfo}</div>` : ''}${profileLinks}</div>` : ''}
     <div class="tg-list">${rows}${bktRows.join('')}</div>${bracketNote}`;
   document.getElementById('teamModal').classList.add('open');
 }
@@ -3801,6 +4156,13 @@ function switchSb(day, btn) {
   if(wk) wk.style.display = day==='wicked' ? '' : 'none';
   btn.classList.add('active');
   activeSbDay=day;
+}
+
+function scheduleScoutingLink(game) {
+  const opponent = game.hid === MY_ID ? game.aid : game.aid === MY_ID ? game.hid : null;
+  if (!opponent || !SCOUT_SUMMARIES.some(report => String(report.id) === String(opponent))) return '';
+  const name = game.hid === MY_ID ? game.an : game.hn;
+  return `<button type="button" class="sb-scout-link" onclick="openScoutingReport(${jsArg(opponent)},contextQuery(),${jsArg(SCOUT_SUMMARIES.find(report => String(report.id) === String(opponent))?.name || name || '')})" aria-label="Scouting report for ${historyEsc(name || 'opponent')}"><i class="fa-sharp fa-regular fa-clipboard" aria-hidden="true"></i>Scouting report</button>`;
 }
 
 function buildScoreboard() {
@@ -3864,6 +4226,7 @@ function buildScoreboard() {
     </div>
     <button class="sb-bell${bellOn?' on':''}" data-key="${g.key}" onclick="toggleGameNotif(${jsArg(g.key)})" title="${bellOn?'Disable':'Enable'} score alert"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
   </div>
+  ${scheduleScoutingLink(g)}
 </div>`;
     }).join('');
     panel.innerHTML = dayGames.length
@@ -4155,6 +4518,7 @@ function synthesizeBracketOnly() {
 // Populate every derived global + live-score map from a snapshot.
 let _revSeen = false, _loadedRev = null;
 function applySnapshot(snap) {
+  SCOUT_SUMMARIES=snap.scoutingReports||[];
   // Silent force-refresh: capture the rev at first load, then reload whenever it changes
   // (bumped by /refresh or /notify?refresh=1) — picks up the latest app + data. Captures
   // the baseline even when it's initially null, so the very first bump still reloads.
@@ -4220,8 +4584,8 @@ function applySnapshot(snap) {
     const p = (snap.pools || {})[k]; if (!p) return;
     POOLS[k] = {
       label: p.label, poolNo: p.poolNo, roundKey: p.roundKey,
-      // registeredLevel is display-only (the level badge); `level` alone decides bracket membership.
-      teams: (p.teams || []).map(t => ({ id: t.id, name: t.name, sr: t.sr, level: t.level, registeredLevel: t.registeredLevel, me: t.id === MY_ID, sister: t.id === SISTER_ID })),
+      // `level` decides bracket membership. The class SHOWN comes from the snapshot's teamDisplay instead.
+      teams: (p.teams || []).map(t => ({ id: t.id, name: t.name, sr: t.sr, level: t.level, me: t.id === MY_ID, sister: t.id === SISTER_ID })),
       schedule: (p.games || []).map(g => ({ key: g.key, no: g.gameNo, t: g.time, fac: g.fac, facName: g.facName, field: g.field, hid: g.hid, hn: g.hn, aid: g.aid, an: g.an })),
     };
   });
@@ -4838,9 +5202,10 @@ setInterval(() => { if (!ROOT_DEFAULT_REQUEST) fetchLive(); },60000);
 // MANUAL REFRESH — return-to-app + pull-to-refresh
 // ============================================================
 // Installed to the iPhone home screen there is no browser chrome, so the 60s poll
-// above was the only way to get fresh scores. Both entry points here re-run the
-// same fetch; neither reloads the page (which would lose scroll position, while
-// fetchLive already repaints everything).
+// above was the only way to get fresh scores. Returning to the app and the ↻ button
+// re-run the same fetch without reloading (keeping scroll position, while fetchLive
+// already repaints everything). The pull gesture reloads the whole page, like a
+// browser's pull-to-refresh, so it also picks up a new deploy.
 let _refreshing = false;
 async function refreshNow() {
   // pageshow fires during the initial navigation too. Startup already owns that fetch;
@@ -4855,8 +5220,8 @@ async function refreshNow() {
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshNow(); });
 window.addEventListener('pageshow', () => { refreshNow(); });
 
-// The ↻ button beside "Scores checked" takes the same path as the pull gesture
-// rather than reloading — same repaint, no boot re-run, keeps scroll position.
+// The ↻ button beside "Scores checked" re-fetches rather than reloading — same
+// repaint, no boot re-run, keeps scroll position.
 // The floor keeps the spin visible long enough to read as feedback on a fast fetch.
 async function manualRefresh(btn) {
   const glyph = btn?.querySelector('span');
@@ -4895,12 +5260,13 @@ async function manualRefresh(btn) {
     dy = Math.min(MAX, deltaY * DAMP);  // damped so the pull feels like resistance
     setPull(dy);
   }, { passive:false });
-  addEventListener('touchend', async () => {
+  addEventListener('touchend', () => {
     if (!pulling) return;
     pulling = false;
     if (dy < THRESHOLD) { setPull(0); return; }
+    // Keep the spinner showing until the reload replaces the page.
     setPull(THRESHOLD, true);
-    try { await refreshNow(); } finally { setPull(0); }
+    location.reload();
   }, { passive:true });
 })();
 
@@ -5430,12 +5796,14 @@ const QUOTES = [
 
   // ---- title wordmark + girl-batter sprite (Wicked red/gold) ----
   function mgTitleHtml(small){
+    const word = String(APP_CONTEXT.teamShortName || APP_CONTEXT.teamName || '').trim().split(/\s+/)[0] || 'Team';
+    const fit = `font-size:min(${small ? 24 : 40}px,${Math.floor(86 / word.length)}vw)`;
     return `
       <div class="mg-title-stars">★ ★ ★ ★ ★ ★ ★</div>
       <div class="mg-title-wrap">
-        <div class="mg-tw${small ? ' mg-tw-sm' : ''}">WICKED</div>
+        <div class="mg-tw${small ? ' mg-tw-sm' : ''}" style="${fit}">${mgEsc(word.toUpperCase())}</div>
         <div class="mg-ts${small ? ' mg-ts-sm' : ''}">HOME RUN DERBY</div>
-        ${small ? '' : '<div><span class="mg-tbanner"><span>Go Wicked!</span></span></div>'}
+        ${small ? '' : `<div><span class="mg-tbanner"><span>Go ${mgEsc(word)}!</span></span></div>`}
       </div>`;
   }
   function mgTitleBatterHtml(){
@@ -6583,5 +6951,7 @@ const QUOTES = [
   });
 })();
 </script>
+
+<script src="/assets/scouting-report.js"></script>
 </body>
 </html>

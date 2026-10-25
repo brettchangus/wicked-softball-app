@@ -92,14 +92,14 @@ test('edited names with dashes stay intact and badge colors remain stable',()=>{
 
 test('the level badge is judged against the name on screen, not the provider name',()=>{
   const TEAM_DISPLAY={
-    magic:{ name:'Example Magic', providerName:"Example Magic 10C - Fall 2026 (Coach One)" },
-    smoke:{ name:'Example Smoke', providerName:'Example Smoke 10uC' },
+    magic:{ name:'Example Magic', level:'C', providerName:"Example Magic 10C - Fall 2026 (Coach One)" },
+    smoke:{ name:'Example Smoke', level:'C', providerName:'Example Smoke 10uC' },
     kept:{ name:'Example Blaze 10B', providerName:'Example Blaze 10B - Coach Three' },
     red:{ name:'Example Red', providerName:'Example 10U Red' },
     black:{ name:'Example Rebels Black', providerName:'Example Rebels - Fall - 10U Black - Coach Five' },
     regional:{ name:'Example Club F', providerName:'Example Club F 10U - Coach Six' },
-    queens:{ name:'Example Queens', providerName:'Example Queens Fall Ball 10U (1)' },
-    older:{ name:'Example Club', providerName:'Example Club 12B - Sample Coach' },
+    queens:{ name:'Example Queens', level:'C', providerName:'Example Queens Fall Ball 10U (1)' },
+    older:{ name:'Example Club', level:'B', providerName:'Example Club 12B - Sample Coach' },
   };
   const globals={ TEAM_DISPLAY, splitRosterName:client('splitRosterName') };
   globals.nameHasLevel=vm.runInNewContext(
@@ -118,19 +118,19 @@ test('the level badge is judged against the name on screen, not the provider nam
   assert.equal(badge('black','Example Rebels Black - Coach Five',null),'');
   assert.equal(badge('regional','Example Club F - Coach Six',null),'');
   // No resolved entry (local fixture): falls back to the printed name.
-  assert.equal(badge('unknown','Example Tremors 10U Black','B'),'B');
+  assert.equal(badge('unknown','Example Tremors 10U Black','B'),'');
   assert.equal(badge('unknown','Example Slammers 10U B - Coach Eight','B'),'');
 });
 
 // The snapshot's pool teams are copied field by field into POOLS, so a field the badge needs is
 // lost unless it is listed there (registeredLevel was: the badge never showed for 0-0 teams).
-test('pool teams keep their registered level when a snapshot is applied',()=>{
+test('pool teams keep bracket levels while display classes come from the server',()=>{
   const mapping=source.match(/teams: (\(p\.teams \|\| \[\]\)\.map\(t => \(\{.*\}\)\)),\n/);
   assert.ok(mapping, 'pool team mapping');
   const teams=vm.runInNewContext(mapping[1],{ MY_ID:'mine', SISTER_ID:null,
     p:{ teams:[{ id:'mine', name:'Ours', sr:'0-0', registeredLevel:'B' },
       { id:'opp', name:'Example Club', sr:'4-1', level:'C', registeredLevel:'C', city:'Example City F' }] } });
   assert.deepEqual(JSON.parse(JSON.stringify(teams)),[
-    { id:'mine', name:'Ours', sr:'0-0', registeredLevel:'B', me:true, sister:false },
-    { id:'opp', name:'Example Club', sr:'4-1', level:'C', registeredLevel:'C', me:false, sister:false }]);
+    { id:'mine', name:'Ours', sr:'0-0', me:true, sister:false },
+    { id:'opp', name:'Example Club', sr:'4-1', level:'C', me:false, sister:false }]);
 });

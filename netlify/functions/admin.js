@@ -11,7 +11,7 @@ import {
   readCatalog, writeCatalog, readTeam, writeTeam, readSeason, writeSeason,
   ensureScopedModel, resolveContext, readScopedArchive, writeScopedArchive, bumpRev, mergeSnapshot,
   deleteTeamRecord, deleteSeasonRecord, deleteSeasonRev, deleteScopedEvent, clearScopedEventLiveLayers, deleteArchiveRecord,
-  useStrongBlobConsistency, readGameChangerRecords,
+  useStrongBlobConsistency, readGameChangerRecords, readDirectoryEntries, readDirectoryEntry, writeDirectoryEntry,
 } from './lib/snapshot.js';
 import {
   canonicalSeasonData, effectiveSelection, eventsFromSeasonData, keyFromName, normalizeKey, publicCatalog,
@@ -27,21 +27,14 @@ import {
   boardCacheKey, boardKey, effectiveRoster, isDefaultMiniGameContext, LEGACY_BOARD_KEY, normalizeRoster,
   scorePrefix,
 } from './lib/minigame.js';
-import { gameChangerLinksForContext, gameChangerOpponents, resolvedGameChangerLinks } from './lib/gamechanger.js';
+import { gameChangerOpponents, resolvedGameChangerLinks } from './lib/gamechanger.js';
+import { loadDirectoryMatches, directorySelection, rememberDirectoryLink, deleteDirectoryTeam, seedTeamDirectory, normalizeDirectoryEntry, directoryIdentity, directoryPeriod, invalidateDirectoryContexts } from './lib/team-directory.js';
 import { searchGameChangerTeams } from './lib/gamechanger-search.js';
-import { refreshGameChangerRecords, locationsForGameChangerLinks } from './lib/gamechanger-records.js';
+import { refreshGameChangerRecords, locationsForGameChangerLinks, namesForGameChangerLinks, linkedGameChangerRecordUrls } from './lib/gamechanger-records.js';
+import { scoutingState, scoutingAction, setScoutingIdentity } from './lib/scouting-reports.ts';
 import {
-  normalizeOpponentFields, opponentOverrides, opponentRows, opponentSearchInput, providerTeamLocations,
+  normalizeOpponentFields, OPPONENT_LEVELS, opponentOverrides, opponentRows, opponentSearchInput, providerTeamLocations, teamDisplayMap,
 } from './lib/opponents.js';
-
-function linkedGameChangerRecordUrls(context, structure) {
-  const links = resolvedGameChangerLinks(structure, gameChangerLinksForContext(context,
-    context.event?.config?.gameChangerTeams));
-  const ownId = structure?.meta?.providerTeamId;
-  const ownUrl = context.season?.teamConfig?.gameChangerUrl;
-  if (ownId && ownUrl) links[ownId] = ownUrl;
-  return links;
-}
 
 // A https://web.gc.com/teams/… profile URL, normalized; null when it is anything else.
 function gameChangerProfileUrl(rawUrl) {
@@ -67,6 +60,7 @@ async function updateEventConfig(context, mutate) {
 }
 
 function setGameChangerLink(config, teamId, url, name) {
+  if (config.directoryMatches) config.directoryMatches[teamId] = { override:true };
   const priorUrl = config.gameChangerTeams?.[teamId];
   const gcName = String(name || '').trim().slice(0, 120)
     || (priorUrl === url ? config.gameChangerTeamNames?.[teamId] : '') || '';
@@ -76,6 +70,7 @@ function setGameChangerLink(config, teamId, url, name) {
 }
 
 function clearGameChangerLink(config, teamId) {
+  if (config.directoryMatches) config.directoryMatches[teamId] = { override:true };
   config.gameChangerTeams = { ...(config.gameChangerTeams || {}), [teamId]:null };
   config.gameChangerTeamNames = { ...(config.gameChangerTeamNames || {}), [teamId]:null };
 }
@@ -111,15 +106,16 @@ export default async function handler(req) {
 
     const context = await resolveContext(body, {
       allowEmptyEvent:['getState', 'setSeasonData', 'switchEvent', 'detectEvent', 'saveEvent',
-        'setMiniGameRoster', 'getMiniGameRoster', 'resetHighScores'].includes(action),
+        'setMiniGameRoster', 'getMiniGameRoster', 'resetHighScores', 'getTeamDirectory', 'saveDirectoryTeam', 'deleteDirectoryTeam', 'seedTeamDirectory'].includes(action),
       // getState must work for a team that has no season yet (createTeam no longer forces one),
       // so the admin can still show + edit the team.
-      allowEmptySeason:['getState'].includes(action),
+      allowEmptySeason:['getState', 'getTeamDirectory', 'saveDirectoryTeam', 'deleteDirectoryTeam', 'seedTeamDirectory'].includes(action),
     });
     const { team, season, event, eventId, scope } = context;
     switch (action) {
-      // Read-only convenience: everything the admin forms need to populate themselves.
+      // State for the admin forms, including the one-time import of existing link assignments.
       case 'getState': {
+        await seedTeamDirectory(context.catalog);
         const subsStore = getStore('push-subscriptions');
         const { blobs } = await subsStore.list();
         // A season-less team still needs its record returned so the team editor can populate.
@@ -136,8 +132,9 @@ export default async function handler(req) {
         const [structure, overrides, gameChangerProfiles] = event ? await Promise.all([
           readStructure(eventId, scope), readOverrides(eventId, scope), readGameChangerRecords(scope),
         ]) : [null, {}, {}];
-        const gameChangerLinks = resolvedGameChangerLinks(structure,
-          gameChangerLinksForContext(context, event?.config?.gameChangerTeams));
+        const directory = await loadDirectoryMatches(context, structure);
+        const gameChangerLinks = directory.links;
+        const scouting = event ? await scoutingState(context) : { eligibility:{bracketsSet:false,opponents:[]},reports:[] };
         // Each tournament's provider-discovered venue (from its last setup), so the tournament
         // editor can show what the weather card uses when no lat/lon override is set.
         const eventVenues = Object.fromEntries(await Promise.all(Object.values(season.events || {})
@@ -151,11 +148,15 @@ export default async function handler(req) {
           team, season,
           activeEventId:eventId, activeEventKey:event?.key || null, overrides,
           gameChangerOpponents:gameChangerOpponents(structure),
+          directoryMatches:directory.matches, directoryPeriod:directory.period,
+          scouting:{ ...scouting.eligibility, reports:scouting.reports },
           // The Opponents card: each opponent's resolved display values, the defaults they fall
           // back to, and what the admin has overridden.
-          opponents:opponentRows(structure, event?.config?.opponents,
-            locationsForGameChangerLinks(gameChangerLinks, gameChangerProfiles)),
+          opponents:opponentRows(scouting.snap || structure, event?.config?.opponents,
+            locationsForGameChangerLinks(gameChangerLinks, gameChangerProfiles), directory.teams),
           seedingDefaults:{ ast:AST_DEFAULT_SEEDING_RULES },
+          // The classes an admin can set in the Opponents editor (validated by normalizeOpponentFields).
+          opponentLevels:OPPONENT_LEVELS,
           // Compatibility shape used by the existing admin form while its controls migrate.
           config:{
             ...(season.teamConfig || {}),
@@ -165,14 +166,115 @@ export default async function handler(req) {
             events:event ? { [eventId]:{
               ...(event.config || {}),
               gameChangerTeams:gameChangerLinks,
-              gameChangerTeamNames:resolvedGameChangerLinks(structure,
-                event.config?.gameChangerTeamNames),
+              gameChangerTeamNames:{
+                ...namesForGameChangerLinks(gameChangerLinks, gameChangerProfiles),
+                ...Object.fromEntries(Object.entries(resolvedGameChangerLinks(structure,
+                  event.config?.gameChangerTeamNames)).filter(([id, name]) => gameChangerLinks[id] && name)),
+                ...directory.names,
+              },
             } } : {},
           },
           subscriberCount: blobs.length, eventVenues,
           miniGameRoster: effectiveRoster({ teamKey:context.teamKey, seasonKey:context.seasonKey, season }),
           meta: structure?.meta ? { name: structure.meta.name, dates: structure.meta.dates, bracketDate: structure.meta.bracketDate } : null,
         });
+      }
+
+      case 'getTeamDirectory': {
+        await seedTeamDirectory(context.catalog);
+        return json({ ok:true, entries:await readDirectoryEntries() });
+      }
+      case 'seedTeamDirectory': {
+        const result = await seedTeamDirectory(context.catalog, { force:true });
+        return json({ ok:true, ...result, entries:await readDirectoryEntries() });
+      }
+      case 'deleteDirectoryTeam': {
+        const entry = await readDirectoryEntry(body.entryId);
+        if (!entry) return json({ error:'Directory team not found.' }, 404);
+        const result = await deleteDirectoryTeam(entry);
+        return json({ ok:true, ...result, entries:await readDirectoryEntries() });
+      }
+      case 'saveDirectoryTeam': {
+        const prior = body.entryId ? await readDirectoryEntry(body.entryId) : null;
+        if (body.entryId && !prior) return json({ error:'Directory team not found.' }, 404);
+        const teamId = body.teamId == null ? null : String(body.teamId);
+        let classEdit = null;
+        if (teamId !== null) {
+          if (!event || !prior) return json({ error:'A linked tournament opponent is required.' }, 400);
+          const structure = await readStructure(eventId, scope);
+          const match = (await loadDirectoryMatches(context, structure)).matches[teamId];
+          if (match?.entryId !== prior.id)
+            return json({ error:'The opponent match changed. Reopen Team Settings.' }, 409);
+          if ('level' in body) {
+            classEdit = normalizeOpponentFields({ level:body.level });
+            if (classEdit.error) return json({ error:classEdit.error }, 400);
+            if (classEdit.fields.level) {
+              const merged = mergeSnapshot(structure, await readResults(eventId, scope), await readOverrides(eventId, scope));
+              if (teamDisplayMap(merged, {})[teamId]?.defaults.level === classEdit.fields.level) classEdit.fields.level = '';
+            }
+          }
+        }
+        let entry;
+        try { entry = normalizeDirectoryEntry(body.entry || {}, prior); }
+        catch (error) { return json({ error:error.message }, 400); }
+        await writeDirectoryEntry(entry);
+        if (teamId !== null) await updateEventConfig(context, config => {
+          // Pin the directory identity so changing its seasonal URL cannot sever this match.
+          config.directoryMatches = { ...(config.directoryMatches || {}), [teamId]:{ entryId:entry.id } };
+          if (classEdit) {
+            const current = { ...(config.opponents?.[teamId] || {}) };
+            if (classEdit.fields.level) current.level = classEdit.fields.level; else delete current.level;
+            config.opponents = { ...(config.opponents || {}), [teamId]:current };
+          }
+        });
+        await invalidateDirectoryContexts();
+        return json({ ok:true, entry });
+      }
+      case 'matchDirectoryTeam': {
+        const structure = await readStructure(eventId, scope);
+        const teamId = String(body.teamId || '');
+        const opponent = gameChangerOpponents(structure).find(row => row.teamId === teamId);
+        if (!opponent) return json({ error:'Team is not in this tournament.' }, 400);
+        const period = directoryPeriod(context, structure);
+        if (!period) return json({ error:'Tournament dates are required to match a seasonal profile.' }, 400);
+        let entry = null;
+        if (body.mode === 'create') {
+          try { entry = normalizeDirectoryEntry({ ...body.entry, period }); }
+          catch (error) { return json({ error:error.message }, 400); }
+        } else if (body.mode === 'existing') {
+          if (!body.entryId) return json({ error:'Choose a directory team.' }, 400);
+          entry = await readDirectoryEntry(body.entryId);
+          if (!entry) return json({ error:'Directory team not found.' }, 404);
+        } else if (body.mode !== 'unmatched') return json({ error:'Choose a match action.' }, 400);
+        if (entry) {
+          // Keep aliases from both the registration list and schedule for this specific entry.
+          const aliases = resolvedGameChangerLinks(structure, Object.fromEntries(
+            (structure?.meta?.ast?.teams || []).map(name => ['name:' + name.toLowerCase().replace(/[^a-z0-9]/g, ''), name])));
+          entry.aliases = [...new Set([...(entry.aliases || []), opponent.name, aliases[teamId]].filter(Boolean))];
+          const identity = directoryIdentity(context, structure, teamId);
+          if (identity) entry.identities = [...new Set([...(entry.identities || []), identity])];
+          entry.updatedAt = new Date().toISOString();
+          await writeDirectoryEntry(entry);
+        }
+        await updateEventConfig(context, config => {
+          config.directoryMatches = { ...(config.directoryMatches || {}), [teamId]:{ entryId:entry?.id || null } };
+        });
+        await invalidateDirectoryContexts();
+        return await done(scope, { entry, teamId });
+      }
+
+      case 'getScoutingReports':
+      case 'viewScoutingReport':
+      case 'generateScoutingReports':
+      case 'refreshScoutingReports':
+      case 'refreshScoutingReport':
+      case 'deleteScoutingReport': {
+        const result = await scoutingAction(context, action, body);
+        return json(result, result.error ? (result.code === 'gameChangerToken' ? 503 : 400) : 200);
+      }
+      case 'setScoutingIdentity': {
+        const result = await setScoutingIdentity(context, body);
+        return json(result, result.error ? 400 : 200);
       }
 
       // ---- Manual score overrides (L3) ----
@@ -219,7 +321,7 @@ export default async function handler(req) {
         if (season.teamConfig.gameChangerUrl && season.teamConfig.gameChangerUrl !== priorGameChangerUrl) {
           const structure = await readStructure(eventId, scope);
           const ownId = structure?.meta?.providerTeamId;
-          if (ownId) await refreshGameChangerRecords(scope, linkedGameChangerRecordUrls(context, structure),
+          if (ownId) await refreshGameChangerRecords(scope, await linkedGameChangerRecordUrls(context, structure),
             { teamIds:[ownId], updateLocation:true }).catch(() => {});
         }
         return await done(scope, { eventId, event:event.config, ...season.teamConfig });
@@ -237,10 +339,11 @@ export default async function handler(req) {
         const date = (season.seasonData || []).find(row => row.key === event.key)?.startDate
           || String(structure.meta?.dates?.[0] || '');
         const age = team.agePrefix || '';
+        const directoryLinks = (await loadDirectoryMatches(context, structure)).links;
+        const directoryAssignments = resolvedGameChangerLinks(structure, event.config?.directoryMatches || {});
         const targets = action === 'searchGameChangerTeam'
           ? [[String(body.teamId), opponents.get(String(body.teamId))]]
-          : [...opponents].filter(([id]) => !resolvedGameChangerLinks(structure,
-            gameChangerLinksForContext(context, event.config?.gameChangerTeams))[id]);
+          : [...opponents].filter(([id]) => !directoryLinks[id] && !directorySelection(directoryAssignments[id]));
         // Match against the admin's edits first (a single-team search may send the editor's
         // unsaved draft), then the provider's own name and location.
         const savedOverrides = opponentOverrides(structure, event.config?.opponents);
@@ -275,13 +378,18 @@ export default async function handler(req) {
         if (confident.length) {
           await updateEventConfig(context, config => {
             for (const row of confident) {
-              // A link saved while the searches ran wins over the automatic match.
-              if (config.gameChangerTeams?.[row.teamId]) continue;
+              // A link saved while the searches ran wins over the automatic match; the link a
+              // deleted directory team cleared does not.
+              const assignment = resolvedGameChangerLinks(structure, config.directoryMatches || {})[row.teamId];
+              const saved = config.gameChangerTeams?.[row.teamId];
+              if (saved && !(assignment?.deletedEntryId && saved === assignment.clearedUrl)) continue;
+              if (directorySelection(assignment)) continue;
               setGameChangerLink(config, row.teamId, row.url, row.gcName);
               matched.push({ teamId:row.teamId, name:row.name, url:row.url });
             }
           });
-          await refreshGameChangerRecords(scope, linkedGameChangerRecordUrls(context, structure),
+          for (const row of matched) await rememberDirectoryLink(context, structure, row.teamId, row.url);
+          await refreshGameChangerRecords(scope, await linkedGameChangerRecordUrls(context, structure),
             { teamIds:matched.map(row => row.teamId), updateLocation:true }).catch(() => {});
         }
         return await done(scope, { matched, unresolved:results.filter(row => !confident.some(item => item.teamId === row.teamId)),
@@ -299,6 +407,11 @@ export default async function handler(req) {
           return json({ error:'team is not in this tournament' }, 400);
         const checked = normalizeOpponentFields(input);
         if (checked.error) return json({ error:checked.error }, 400);
+        // A class equal to the calculated one is not saved, so the team keeps following the calculation.
+        if (checked.fields.level) {
+          const merged = mergeSnapshot(structure, await readResults(eventId, scope), await readOverrides(eventId, scope));
+          if (teamDisplayMap(merged, {})[teamId]?.defaults.level === checked.fields.level) checked.fields.level = '';
+        }
         let link;                                   // undefined = unchanged, null = remove
         if ('gcUrl' in input) {
           const rawUrl = String(input.gcUrl || '').trim();
@@ -323,7 +436,8 @@ export default async function handler(req) {
           else if ('gcName' in input && config.gameChangerTeams?.[teamId])
             setGameChangerLink(config, teamId, config.gameChangerTeams[teamId], input.gcName);
         });
-        if (link) await refreshGameChangerRecords(scope, linkedGameChangerRecordUrls(context, structure),
+        if (link) await rememberDirectoryLink(context, structure, teamId, link);
+        if (link) await refreshGameChangerRecords(scope, await linkedGameChangerRecordUrls(context, structure),
           { teamIds:[teamId], updateLocation:true }).catch(() => {});
         return await done(scope, { teamId, opponent:saved.opponents?.[teamId] || {},
           url:saved.gameChangerTeams?.[teamId] || null, name:saved.gameChangerTeamNames?.[teamId] || null });
@@ -341,14 +455,16 @@ export default async function handler(req) {
         if (!link) return json({ error:'use a https://web.gc.com/teams/... profile URL' }, 400);
         let gcName = null;
         await updateEventConfig(context, config => { gcName = setGameChangerLink(config, teamId, link, body.name); });
-        await refreshGameChangerRecords(scope, linkedGameChangerRecordUrls(context, structure),
+        await rememberDirectoryLink(context, structure, teamId, link);
+        await refreshGameChangerRecords(scope, await linkedGameChangerRecordUrls(context, structure),
           { teamIds:[teamId], updateLocation:true }).catch(() => {});
         return await done(scope, { teamId, url:link, name:gcName });
       }
       case 'refreshGameChangerRecords': {
         const structure = await readStructure(eventId, scope);
-        const result = await refreshGameChangerRecords(scope, linkedGameChangerRecordUrls(context, structure));
-        return await done(scope, { records:result.records, checked:result.checked, changed:result.changed, updated:result.updated, failed:result.failed });
+        const result = await refreshGameChangerRecords(scope, await linkedGameChangerRecordUrls(context, structure));
+        return await done(scope, { records:result.records, checked:result.checked,
+          changed:result.changed, updated:result.updated, failed:result.failed });
       }
       case 'clearGameChangerTeamLink': {
         const teamId = String(body.teamId || '').trim();
@@ -509,6 +625,8 @@ export default async function handler(req) {
         const nextScope = { teamKey:context.teamKey, seasonKey:context.seasonKey, eventKey:nextEventKey };
         await writeStructure(id, s, nextScope);
         await writeSeason(season);
+        await refreshGameChangerRecords(nextScope, await linkedGameChangerRecordUrls({ ...context, season, event:next }, s))
+          .catch(() => {});
         await bumpRev(nextScope);
         return json({ ok:true, activeEventId:id, activeEventKey:nextEventKey, name:s.meta.name, pools:s.poolOrder.length });
       }
@@ -695,6 +813,9 @@ export default async function handler(req) {
         if (!reuse || s.meta.name !== structureName) await writeStructure(providerRef, s, nextScope);
         if (replacingProvider) await clearScopedEventLiveLayers(nextScope);
         await writeSeason(season);
+        if (body.makeActive)
+          await refreshGameChangerRecords(nextScope, await linkedGameChangerRecordUrls({ ...context, season, event:next }, s))
+            .catch(() => {});
         await bumpRev(nextScope);
         return json({
           ok:true, eventKey:nextEventKey, name:s.meta.name, pools:s.poolOrder.length,
@@ -738,6 +859,7 @@ export default async function handler(req) {
         season.seasonData = previousRows;
         await writeStructure(event.providerRef, s, scope);
         await writeSeason(season);
+        await refreshGameChangerRecords(scope, await linkedGameChangerRecordUrls(context, s)).catch(() => {});
         await bumpRev(scope);
         return json({ ok:true, activeEventId:event.providerRef, activeEventKey:event.key, name:s.meta.name, pools:s.poolOrder.length });
       }

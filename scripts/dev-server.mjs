@@ -60,7 +60,7 @@ registerHooks({
 // ---- functions, routed by each file's config.path -------------------------------------------
 const routes = [];
 const functionsDir = path.join(ROOT, 'netlify', 'functions');
-for (const file of fs.readdirSync(functionsDir).filter(name => name.endsWith('.js')).sort()) {
+for (const file of fs.readdirSync(functionsDir).filter(name => /\.(?:js|ts)$/.test(name)).sort()) {
   try {
     const mod = await import(pathToFileURL(path.join(functionsDir, file)).href);
     if (typeof mod.default !== 'function' || !mod.config?.path) continue; // scheduled-only functions

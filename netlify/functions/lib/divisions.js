@@ -86,6 +86,14 @@ export function divisionLevel(name) {
   return m ? m[1].toUpperCase() : null;
 }
 
+// THE one reader of a team's class label, used by setup, the Opponents code and scouting: "10B",
+// "10-C", "10U-B", "B" -> the letter, "10 Rec"/"10-Rec" -> "Rec", anything else ("10 Open", "") ->
+// null. Not a bare last-letter match: "10 Rec" ends in a c, which would read as C.
+export function classCode(value) {
+  const m = /^(?:\d{1,2}\s*U?\s*[-\s]?\s*)?([A-D]|Rec)$/i.exec(String(value ?? '').trim());
+  return !m ? null : /^rec$/i.test(m[1]) ? 'Rec' : m[1].toUpperCase();
+}
+
 // Age from a NorCal team-class string, e.g. "10-B" / "10B" / "10-Open" -> 10. Returns null when
 // unparseable (NorCal's own `apex.age` field is unreliable — often null — so callers should use
 // this against `info.teamClass`/`info.teamClassAbr` instead).

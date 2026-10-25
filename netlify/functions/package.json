@@ -2,9 +2,17 @@
   "name": "wicked-functions",
   "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.54.0",
     "@netlify/blobs": "^7.0.0",
     "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^6.0.2",
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
   }
 }

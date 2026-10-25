@@ -30,7 +30,7 @@ export function gameChangerSeason(date) {
   return month <= 5 ? 'spring' : month <= 8 ? 'summer' : 'fall';
 }
 
-export function gameChangerCandidates(hits, { name, team, coach, city:knownCity, age, date, state = 'CA' } = {}) {
+export function gameChangerCandidates(hits, { name, team, coach, city:knownCity, age, date, season:requestedSeason, year:requestedYear, state = 'CA' } = {}) {
   const edited = team ? { team, coach } : null;
   const expectedParts = expectedNameParts(name, edited);
   const expected = compact(expectedParts.team);
@@ -39,8 +39,8 @@ export function gameChangerCandidates(hits, { name, team, coach, city:knownCity,
   const expectedCores = gameChangerSearchTerms(name, edited).map(compact).filter(Boolean);
   const expectedAge = String(age || name || '').match(/\b(\d{1,2})\s*[uabc]\b/i)?.[1]
     || String(age || '').match(/\d{1,2}/)?.[0];
-  const expectedYear = Number(String(date || '').slice(0, 4));
-  const expectedSeason = gameChangerSeason(date);
+  const expectedYear = Number(requestedYear || String(date || '').slice(0, 4));
+  const expectedSeason = requestedSeason || gameChangerSeason(date);
   return (hits || []).filter(hit => hit.type === 'team' && hit.result?.public_id)
     .map(({ result }) => {
       const id = String(result.public_id);
@@ -84,8 +84,8 @@ export function gameChangerCandidates(hits, { name, team, coach, city:knownCity,
 export async function searchGameChangerTeams(name, options = {}, fetchImpl = fetch) {
   const token = String(options.token || '').trim();
   if (!token) throw new Error('Enter a GameChanger token in the admin page');
-  const season = gameChangerSeason(options.date);
-  const year = Number(String(options.date || '').slice(0, 4));
+  const season = options.season || gameChangerSeason(options.date);
+  const year = Number(options.year || String(options.date || '').slice(0, 4));
   const filters = { sport:'softball', include_older_seasons:false,
     states:[options.state || 'CA'], types:['team'] };
   if (season && year) filters.seasons = [{ name:season, year }];
@@ -105,9 +105,10 @@ export async function searchGameChangerTeams(name, options = {}, fetchImpl = fet
   };
   const parts = options.team ? { team:options.team, coach:options.coach } : null;
   const terms = gameChangerSearchTerms(name, parts);
-  const firstHits = await search(terms[0]);
+  // Scouting can use a punctuation-free query while still validating the original team/coach.
+  const firstHits = await search(options.query || terms[0]);
   const hits = firstHits.length ? firstHits : (await Promise.all(terms.slice(1).map(search))).flat();
   const unique = [...new Map(hits.map(hit => [hit.result?.public_id, hit])).values()];
   return gameChangerCandidates(unique, { name, ...(parts || {}), city:options.city,
-    age:options.age, date:options.date, state:filters.states[0] });
+    age:options.age, date:options.date, season, year, state:filters.states[0] });
 }

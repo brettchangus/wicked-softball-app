@@ -9,12 +9,12 @@ import Anthropic from '@anthropic-ai/sdk';
 import TournamentProjection from '../../assets/projections.js';
 import { getStore } from '@netlify/blobs';
 import {
-  readStructure, readResults, readOverrides, readScopedArchive, resolveContext, mergeSnapshot,
+  readStructure, readResults, readOverrides, readScopedArchive, resolveContext, mergeSnapshot, readDirectoryEntries,
 } from './lib/snapshot.js';
 import { verifyArchiveBundle } from './lib/archive.js';
 import { withSeedingRules } from './lib/seeding.js';
 import { applyTeamDisplay, editedTeamLabels, registeredTeamLabels, withRecentResultNames } from './lib/opponents.js';
-import { loadTeamDisplay } from './lib/team-display.js';
+import { loadHistoryTeamLabels, loadTeamDisplay } from './lib/team-display.js';
 import { seasonIsComplete } from './lib/context.js';
 import { MY_ID } from './lib/tournament.js';
 
@@ -539,7 +539,8 @@ export function buildBracketFrameContext(snap) {
 }
 
 // Projected bracket from current standings, so the bot can answer "who will Wicked likely play
-// next round?" Mirrors the dashboard: rank teams (wins → runs allowed → runs scored → run diff),
+// next round?" Mirrors the dashboard: rank teams (the provider's complete posted order, else the
+// tournament's seeding rules, else wins → runs allowed → runs scored),
 // then either seed each bracket from its `division` (skill level) or, with no division tags, band
 // the global ranking by size. Only emitted PRE-assignment (once the real bracket is posted, the
 // BRACKET RESULTS section above is authoritative). Returns a context string or null.
@@ -557,19 +558,37 @@ export function buildBracketProjection(snap) {
   for (const k of (snap.poolOrder || Object.keys(snap.pools || {}))) {
     const pool = (snap.pools || {})[k]; if (!pool) continue;
     const standings = pool.standings || [];
+    // A manual score override makes the provider's posted order stale, as on the dashboard.
+    const manual = (pool.games || []).some(g => snap.results?.[g.key]?.manual);
     for (const t of (pool.teams || [])) {
       const s = standings.find(x => x.teamID === t.id || x._key === t.id) || {};
       const [w = 0, l = 0, tie = 0] = (s.record || '').split('-').map(n => parseInt(n, 10) || 0);
-      teams.push({ id: t.id, name: t.name, level: t.level || null, w, l, t: tie, rf: s.PF ?? 0, ra: s.PA ?? 0 });
+      teams.push({ id: t.id, name: t.name, level: t.level || null, w, l, t: tie, rf: s.PF ?? 0, ra: s.PA ?? 0,
+        officialRank: manual ? null : s.officialRank ?? null });
     }
   }
   if (!teams.length || teams.every(t => t.w + t.l + t.t === 0)) return null;  // no meaningful results yet
 
-  // The tournament's verified seeding rules (shared with the dashboard), else the legacy order.
+  // Mirrors the dashboard's sortStandingsTeams: a complete posted order wins; otherwise the
+  // tournament's verified seeding rules, else the legacy order, with our team first within an
+  // unresolved tie.
   const rules = snap.meta?.projectionRules?.verified === true ? snap.meta.projectionRules : null;
-  const rank = rows => rules ? TournamentProjection.rankByRules(rows, rules, snap) : [...rows].sort((a, b) =>
-    (b.w - a.w) || ((a.ra || 0) - (b.ra || 0)) || ((b.rf || 0) - (a.rf || 0)) ||
-    (((b.rf || 0) - (b.ra || 0)) - ((a.rf || 0) - (a.ra || 0))));
+  const legacyGroups = rows => {
+    const compare = (a, b) => (b.w - a.w) || ((a.ra || 0) - (b.ra || 0)) || ((b.rf || 0) - (a.rf || 0));
+    const groups = [];
+    for (const t of [...rows].sort((a, b) => compare(a, b) || String(a.id).localeCompare(String(b.id)))) {
+      const last = groups.at(-1);
+      if (last && compare(last[0], t) === 0) last.push(t); else groups.push([t]);
+    }
+    return groups;
+  };
+  const rank = rows => {
+    if (rows.every(t => t.officialRank != null && Number.isFinite(Number(t.officialRank)))
+      && new Set(rows.map(t => Number(t.officialRank))).size === rows.length)
+      return [...rows].sort((a, b) => Number(a.officialRank) - Number(b.officialRank));
+    return (rules ? TournamentProjection.rankGroupsByRules(rows, rules, snap) : legacyGroups(rows))
+      .flatMap(group => [...group.filter(t => t.id === myId), ...group.filter(t => t.id !== myId)]);
+  };
 
   const seedOrder = n => { if (n <= 1) return [1]; const p = seedOrder(n / 2); const o = []; for (const s of p) { o.push(s); o.push(n + 1 - s); } return o; };
   const nextPow2 = n => { let c = 1; while (c < n) c *= 2; return Math.max(c, 1); };
@@ -743,33 +762,28 @@ export default async function handler(req) {
     snap = withSeedingRules(snap, archivedEvent || event);
     // Same opponent names the dashboard shows (an admin's name/coach edits) — in the games and in
     // a roster's registered-team list, which has no ids for applyTeamDisplay to rewrite.
+    const directoryEntries = await readDirectoryEntries();
     const display = await loadTeamDisplay(scope, snap, {
+      context, directoryEntries,
       opponents:{ ...(archivedEvent?.config?.opponents || {}), ...(event?.config?.opponents || {}) },
       links:{ ...(archivedEvent?.config?.gameChangerTeams || {}), ...(event?.config?.gameChangerTeams || {}) },
       ownUrl:season.teamConfig?.gameChangerUrl,
     });
     snap = applyTeamDisplay(snap, display);
-    // Season-history games need the display edits from their own tournament, including edits
-    // saved after archival. Use frozen structures when available, just as the dashboard does.
+    // The season's game log is only printed for a completed season. Its games take the display
+    // edits from their own tournament, read from the frozen snapshots when there are any.
     const labelsByEvent = { [String(snap.meta?.eventId)]:editedTeamLabels(display) };
-    const historyEventIds = new Set((snap.wicked || snap.meta?.wicked)?.games?.map(game => String(game.eventId)) || []);
-    if (historyEventIds.size) await Promise.all(Object.entries(servedEvents).map(async ([key, item]) => {
-      const edits = { ...(item.config?.opponents || {}), ...(season.events?.[key]?.config?.opponents || {}) };
-      if (key === context.eventKey || !Object.values(edits).some(edit => edit?.name || edit?.coach)) return;
-      const eventScope = { teamKey:context.teamKey, seasonKey:context.seasonKey, eventKey:key };
-      let eventStructure = archive ? item.snapshot : await readStructure(item.providerRef, eventScope);
-      if (!eventStructure && !archive && item.snapshotPath) {
-        try {
-          const response = await fetch(new URL('/' + item.snapshotPath.replace(/^\/+/, ''), req.url),
-            { signal:AbortSignal.timeout(5000) });
-          if (response.ok) eventStructure = await response.json();
-        } catch {}
-      }
-      if (!eventStructure?.meta?.eventId || !historyEventIds.has(String(eventStructure.meta.eventId))) return;
-      const links = { ...(item.config?.gameChangerTeams || {}), ...(season.events?.[key]?.config?.gameChangerTeams || {}) };
-      labelsByEvent[String(eventStructure.meta.eventId)] = editedTeamLabels(await loadTeamDisplay(
-        eventScope, eventStructure, { opponents:edits, links }));
-    }));
+    if (seasonIsComplete(season) && (snap.wicked || snap.meta?.wicked)?.games?.length) {
+      Object.assign(labelsByEvent, await loadHistoryTeamLabels(context, servedEvents, season.events, async (key, item) => {
+        if (archive) return item.snapshot;
+        const stored = await readStructure(item.providerRef,
+          { teamKey:context.teamKey, seasonKey:context.seasonKey, eventKey:key });
+        if (stored || !item.snapshotPath) return stored;
+        const response = await fetch(new URL('/' + item.snapshotPath.replace(/^\/+/, ''), req.url),
+          { signal:AbortSignal.timeout(5000) });
+        return response.ok ? response.json() : null;
+      }, { directoryEntries }));
+    }
     const shownWicked = withRecentResultNames(snap.wicked || snap.meta?.wicked, labelsByEvent);
     if (shownWicked) snap = { ...snap, wicked:shownWicked };
     if (snap.meta?.ast?.teams?.length) {

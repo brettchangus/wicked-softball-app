@@ -9,7 +9,7 @@
 //   header4EP/{publicEventId}              -> event display name
 // Plus the team endpoint (NOT under EP/): api/v1/Team/{id} -> apex (season record + rank + class).
 import { SETUP_VERSION } from './tournament.js';
-import { divisionAges, divisionMatchesAge, divisionLevel, parseAge, teamClassAge, teamClassLevel } from './divisions.js';
+import { classCode, divisionAges, divisionMatchesAge, divisionLevel, parseAge, teamClassAge, teamClassLevel } from './divisions.js';
 
 const API = 'https://norcal.registerplay.com/api/v1/EP';
 
@@ -29,7 +29,7 @@ export async function fetchTeamStats(teamId) {
     // 2027 team) — that's a real 0–0 record with no rank yet, not missing data. Only a response
     // with neither team info nor apex (unknown team) is treated as unavailable.
     if (!data?.apex && !data?.info) return null;
-    return { ...teamStatsFrom(data), location:teamLocationFrom(data), registeredLevel:teamRegisteredLevel(data) };
+    return { ...teamStatsFrom(data), location:teamLocationFrom(data), registeredLevel:teamRegisteredLevel(data), classLabel:teamClassLabel(data) };
   } catch { return null; }
 }
 
@@ -49,6 +49,23 @@ export function teamRegisteredLevel(data = {}) {
   const level = teamClassLevel(data.info?.teamClass);
   return /^[A-D]$/.test(level || '') ? level : null;
 }
+
+// Pure: the team's NorCal class for display, e.g. "10B" or "10 Rec". The class it plays at
+// (`apex.teamClass`) wins over the one it registered at (`info.teamClass`), and the age comes from
+// whichever names one. Spellings like "10-B", "10U-B" and "10B" all read the same. A class other
+// than A–D, Rec or Open (or none at all) gives null, so the scouting report shows no badge.
+export function teamClassLabel(data = {}) {
+  const parse = value => /^(?:(\d{1,2})\s*U?\s*[-\s]?\s*)?([A-D]|Rec|Open)$/i.exec(String(value || '').trim());
+  const played = parse(data.apex?.teamClass), registered = parse(data.info?.teamClass);
+  const m = played || registered;
+  if (!m) return null;
+  const age = m[1] || registered?.[1] || '';
+  const level = m[2].length === 1 ? m[2].toUpperCase() : m[2][0].toUpperCase() + m[2].slice(1).toLowerCase();
+  return age + (level.length > 1 && age ? ' ' : '') + level;
+}
+
+// Pure: the class in a NorCal class label ("10B" -> "B", "10 Rec" -> "Rec"), or null ("10 Open").
+export const teamClassCode = classCode;
 
 // Pure: the season stats a Team/{id} payload describes (exported for tests).
 export function teamStatsFrom(data = {}) {
@@ -382,6 +399,10 @@ function mapGame(g) {
   };
 }
 
+// A bracket slot's team id, or null when no team is placed there yet. Before the bracket is
+// seeded, NorCal fills every slot with teamID "0" and a label like "10U Pool P - 1st Overall".
+export const assignedTeamId = id => (id && String(id) !== '0') ? id : null;
+
 // NorCal bracket FRAME — the published structure (seed pairings, byes, rounds, advancement) AND,
 // when NorCal has already placed teams into the bracket (e.g. a bracket-only event with no pool
 // play to seed from), each slot's ASSIGNED team. Captured so the client renders the AUTHORITATIVE
@@ -395,8 +416,8 @@ function mapGame(g) {
 // NorCal's payload lists each game across several layout slots (some empty), so we MERGE by gameNo,
 // taking the first non-null value for each field — that coalesces the seed-only slot with the
 // teams+time slot into one complete game record.
-function extractBracketFrame(d) {
-  const realId = t => (t && t.teamID) ? t.teamID : null; // feed placeholders ("L-36") carry teamID:null
+export function extractBracketFrame(d) {
+  const realId = t => assignedTeamId(t?.teamID); // feed placeholders ("L-36") carry teamID:null
   const byNo = new Map();
   for (const rs of (d.bracket?.roundSets || []))
     for (const round of (rs.rounds || []))
@@ -602,6 +623,9 @@ export async function buildStructure(eventId, { myId, agePrefix = '10', division
   // `level`, which decides bracket membership and stays exactly as before: a team can be registered
   // at one level and placed in another level's bracket here.
   teamList.forEach(t => { const registered = statMap[t.id]?.registeredLevel; if (registered) t.registeredLevel = registered; });
+  // The team's true NorCal class (played over registered, Rec included) is what every surface SHOWS
+  // as its class, even when it plays in another level's pool or bracket here. Display only, too.
+  teamList.forEach(t => { const cls = teamClassCode(statMap[t.id]?.classLabel); if (cls) t.norcalClass = cls; });
   // Each team's home city/state rides along on the same profile — the default location shown
   // beside an opponent (see lib/opponents.js) until an admin overrides it.
   teamList.forEach(t => { const where = statMap[t.id]?.location; if (where) { if (where.city) t.city = where.city; if (where.state) t.state = where.state; } });

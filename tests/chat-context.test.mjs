@@ -67,6 +67,36 @@ test('the projected bracket block seeds by the tournament rules (head-to-head) w
 });
 
 
+test('the projected bracket block puts our team first in an unresolved tie, like the dashboard', () => {
+  const standing = (teamID, record) => ({ teamID, record, PA:5, PF:5 });
+  // Our id sorts after the team we are tied with, so only the tie preference puts us first.
+  const snap = projectionRules => ({ meta:{ providerTeamId:'Z', projectionRules }, poolOrder:['A'],
+    pools:{ A:{ teams:['A', 'Y', 'Z'].map(id => ({ id, name:id })), games:[],
+      standings:[standing('A', '1-1'), standing('Y', '2-0'), standing('Z', '1-1')] } },
+    results:{}, brackets:[{ level:'gold', label:'Gold', size:3 }], bracketGames:{} });
+  const seeding = text => text.match(/Projected seeding: (.*)/)[1];
+  assert.equal(seeding(buildBracketProjection(snap(null))), '#1 Y, #2 Z, #3 A');
+  assert.equal(seeding(buildBracketProjection(snap({ verified:true, primary:'winPercentage', tiebreakers:['runsAllowed'] }))),
+    '#1 Y, #2 Z, #3 A');
+});
+
+test('the projected bracket block follows a posted order, and only falls back to wins without one', () => {
+  // Storm played an extra game: 2-2 with fewer runs allowed than Rohnert Park, but NorCal ranks it lower.
+  const standing = (teamID, record, PA, officialRank) => ({ teamID, record, PA, PF:0, officialRank });
+  const snap = ranks => ({ meta:{ providerTeamId:'W' }, poolOrder:['A'],
+    pools:{ A:{ teams:['W', 'RP', 'ST'].map(id => ({ id, name:id })), games:[],
+      standings:[standing('W', '2-1', 9, ranks?.[0]), standing('RP', '2-1', 14, ranks?.[1]), standing('ST', '2-2', 13, ranks?.[2])] } },
+    results:{}, brackets:[{ level:'gold', label:'Gold', size:3 }], bracketGames:{} });
+  const seeding = text => text.match(/Projected seeding: (.*)/)[1];
+  assert.equal(seeding(buildBracketProjection(snap(null))), '#1 W, #2 ST, #3 RP');
+  assert.equal(seeding(buildBracketProjection(snap([1, 2, 3]))), '#1 W, #2 RP, #3 ST');
+  // A manual score override in the pool makes the posted order stale.
+  const overridden = snap([1, 2, 3]);
+  overridden.pools.A.games = [{ key:'g', hid:'W', aid:'RP' }];
+  overridden.results = { g:{ status:'completed', topScore:1, botScore:0, manual:true } };
+  assert.equal(seeding(buildBracketProjection(overridden)), '#1 W, #2 ST, #3 RP');
+});
+
 test('chat seeds head-to-head ties within each division', () => {
   const standing = (teamID, record, PA) => ({teamID,record,PA,PF:0});
   const snap = {meta:{providerTeamId:'W',projectionRules:{verified:true,primary:'winPercentage',tiebreakers:['headToHead','runsAllowed']}},

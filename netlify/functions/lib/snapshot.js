@@ -67,6 +67,28 @@ export async function writeOverrides(eventId, o, scope = null) {
   if (scope) return store().setJSON(scopedKey(scope, 'overrides'), o);
   return store().setJSON(`overrides:${eventId}`, o);
 }
+// Shared directory entries use separate Blobs so edits to unrelated teams do not overwrite each other.
+export async function readDirectoryEntries({ includeDeleted = false } = {}) {
+  const { blobs } = await store().list({ prefix:'v2:directory:team:' });
+  return (await Promise.all(blobs.map(row => store().get(row.key, { type:'json' }))))
+    .filter(row => row && (includeDeleted || !row.deletedAt)).sort((a, b) => a.name.localeCompare(b.name));
+}
+export async function readDirectoryEntry(id, { includeDeleted = false } = {}) {
+  if (!/^[a-zA-Z0-9-]{1,80}$/.test(String(id))) throw new Error('Invalid directory team id.');
+  const entry = await store().get('v2:directory:team:' + id, { type:'json' });
+  return entry && (includeDeleted || !entry.deletedAt) ? entry : null;
+}
+export async function writeDirectoryEntry(entry) {
+  await readDirectoryEntry(entry.id); // Validate the key before writing.
+  return store().setJSON('v2:directory:team:' + entry.id, entry);
+}
+export async function readDirectorySeed() {
+  return store().get('v2:directory:seed-v1', { type:'json' });
+}
+export async function writeDirectorySeed(details = {}) {
+  return store().setJSON('v2:directory:seed-v1', { ...details, completedAt:new Date().toISOString() });
+}
+
 export async function readGameChangerRecords(scope) {
   return (await store().get(scopedKey(scope, 'gameChangerRecords'), { type:'json' }).catch(() => null)) || {};
 }
@@ -138,10 +160,13 @@ export async function deleteSeasonRev(team, season) {
   return store().delete(seasonScopedKey({ teamKey: team, seasonKey: season }, 'rev'));
 }
 export async function deleteScopedEvent(scope) {
+  const { blobs:scouting } = await store().list({ prefix:scopedKey(scope, 'scouting:') });
   await Promise.all([
     store().delete(scopedKey(scope, 'structure')),
     store().delete(scopedKey(scope, 'gameChangerRecords')),
     clearScopedEventLiveLayers(scope),
+    store().delete(scopedKey(scope, 'scoutingIndex')),
+    ...scouting.map(blob => store().delete(blob.key)),
   ]);
 }
 // When replacing a provider under the same stable event key, keep the old structure
@@ -348,6 +373,44 @@ export async function bumpRev(scope = null) {
   return rev;
 }
 
+// NorCal posts each pool's order as `place` on its standings rows. Expose it as the same
+// officialPoolRank/officialRank Tourney Machine's rows carry (scores.js), so every reader ranks a
+// NorCal pool the way NorCal does. Only once a game has been played (before that every team is
+// 0-0 and the order means nothing), and the overall rank only for a single pool, where the pool's
+// order is the event's. Rows that already carry a rank are left alone.
+export function withPostedStandingsRanks(rows, poolCount) {
+  if (!rows.length || rows.some(s => s.officialPoolRank !== undefined)) return rows;
+  const place = s => Number.isInteger(Number(s.place)) && Number(s.place) > 0 ? Number(s.place) : null;
+  if (rows.some(s => place(s) == null)) return rows;
+  const played = rows.some(s => String(s.record || '').split('-').some(n => parseInt(n, 10) > 0));
+  if (!played) return rows;
+  return rows.map(s => ({ ...s, officialPoolRank:place(s), officialRank:poolCount === 1 ? place(s) : null }));
+}
+
+// An admin's score override for a bracket game, applied to the provider's bracket feed so every
+// bracket reader (the dashboard's tree and Upcoming Games card, chat) shows it, not just
+// `results`. The feed's won/lost is the TOP team's result, while an override's is the tracked
+// team's ("Win (Wicked)"), so decisive scores become 'completed' and a bare won/lost is turned
+// into the top team's result.
+export function withBracketGameOverrides(bracketGames, overrides, myId) {
+  if (!overrides || !Object.keys(overrides).length) return bracketGames;
+  const apply = (g, o) => {
+    const game = { ...g };
+    if (o.topScore != null) game.topScore = o.topScore;
+    if (o.botScore != null) game.botScore = o.botScore;
+    let status = o.status ?? g.status;
+    if (status === 'won' || status === 'lost') {
+      const decisive = game.topScore != null && game.botScore != null && game.topScore !== game.botScore;
+      const topIsOurs = !(myId && game.botId === myId);
+      status = decisive ? 'completed' : (status === 'won') === topIsOurs ? 'won' : 'lost';
+    }
+    game.status = status;
+    return game;
+  };
+  return Object.fromEntries(Object.entries(bracketGames).map(([level, games]) =>
+    [level, (games || []).map(g => g.key != null && overrides[g.key] ? apply(g, overrides[g.key]) : g)]));
+}
+
 // Merge L1 + L2 + L3 into the snapshot the client consumes. Overrides win (and are
 // flagged `manual`). Per-pool standings are attached onto each pool.
 export function mergeSnapshot(structure, results, overrides) {
@@ -356,14 +419,17 @@ export function mergeSnapshot(structure, results, overrides) {
   const games = { ...(r.games || {}) };
   for (const [k, o] of Object.entries(overrides || {})) games[k] = { ...(games[k] || {}), ...o, manual: true };
   const pools = {};
-  for (const [k, p] of Object.entries(structure.pools || {})) pools[k] = { ...p, standings: (r.standings || {})[k] || [] };
+  const poolCount = Object.keys(structure.pools || {}).length;
+  for (const [k, p] of Object.entries(structure.pools || {}))
+    pools[k] = { ...p, standings: withPostedStandingsRanks((r.standings || {})[k] || [], poolCount) };
   return {
     meta: structure.meta,
     poolOrder: structure.poolOrder,
     pools,
     brackets: structure.brackets,
     results: games,
-    bracketGames: r.bracketGames || {},
+    bracketGames: withBracketGameOverrides(r.bracketGames || {}, overrides,
+      structure.meta?.providerTeamId || structure.meta?.myId || null),
     updatedAt: r.updatedAt || null,
     wicked: r.wicked || (structure.meta && structure.meta.wicked) || null,  // season record + NorCal rank
   };

@@ -220,3 +220,16 @@ test('dashboard division seeding keeps unrelated divisions out of head-to-head t
   assert.equal(ids(sort(rows)), 'Y,W,X,Z');
   assert.equal(ids(sort([...rows,row('C',1,1,{level:'C'})])), 'Y,W,X,Z');
 });
+
+test('dashboard bracket projection puts our team first in an unresolved tie, like the standings', () => {
+  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const extract = name => { const tail = html.slice(html.indexOf('function '+name+'(')); return tail.slice(0, tail.search(/^}/m)+1); };
+  // Pre-event: every team 0–0 with no posted ranks; our id sorts last.
+  const teams = ['a','b','c','d','z'].map(id => ({ id, w: 0, l: 0, t: 0, ra: 0, rf: 0, level: 'B', me: id === 'z' }));
+  for (const BRACKETS of [[{}], [{division:'B'}]]) {
+    const globals = { TournamentProjection: projection, SEEDING_RULES: null, projectionSnapshot: null, BRACKETS };
+    globals.sortStandingsTeams = vm.runInNewContext('('+extract('sortStandingsTeams')+')', globals);
+    const sort = vm.runInNewContext('('+extract('sortBracketTeams')+')', globals);
+    assert.equal(sort(teams)[0].id, 'z');
+  }
+});

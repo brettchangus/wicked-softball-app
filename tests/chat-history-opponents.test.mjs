@@ -9,20 +9,23 @@ const { writeCatalog, writeTeam, writeSeason, writeStructure, writeScopedArchive
 const { createArchiveBundle } = await import('../netlify/functions/lib/archive.js');
 const chat = (await import('../netlify/functions/chat.js')).default;
 
-for (const storage of ['live', 'archive', 'static']) {
+// `stored` / `archive` / `static` are where a completed season's earlier tournament is read from.
+// `active` is an ongoing season, whose prompt has no game log — so nothing is read for it.
+for (const storage of ['stored', 'archive', 'static', 'active']) {
   test(`chat applies each tournament's opponent edits to season history (${storage})`, async t => {
+    const active = storage === 'active';
     const teamKey = `history-${storage}`, seasonKey = 'example-season';
     const scope = eventKey => ({ teamKey, seasonKey, eventKey });
     const team = { key:teamKey, name:'Example Team', defaultSeasonKey:seasonKey };
     const events = {
       earlier:{ key:'earlier', name:'Earlier Cup', providerRef:'100',
         config:{ opponents:{ opp:{ name:'Edited Past', coach:'Updated Coach' } } },
-        ...(storage === 'static' ? { snapshotPath:'data/earlier.json' } : {}) },
+        ...(storage === 'static' || active ? { snapshotPath:'data/earlier.json' } : {}) },
       current:{ key:'current', name:'Current Cup', providerRef:'200',
         config:{ opponents:{ opp:{ name:'Edited Current' } } } },
       untouched:{ key:'untouched', name:'Other Cup', providerRef:'300', config:{} },
     };
-    const season = { teamKey, key:seasonKey, name:'Example Season', status:'completed', featuredEventKey:'current',
+    const season = { teamKey, key:seasonKey, name:'Example Season', status:active ? 'active' : 'completed', featuredEventKey:'current',
       ...(storage === 'archive' ? { archiveVersion:1 } : {}),
       teamConfig:{}, events, seasonData:Object.values(events).map(event => ({
         key:event.key, name:event.name, providerRef:event.providerRef,
@@ -48,14 +51,14 @@ for (const storage of ['live', 'archive', 'static']) {
       await writeScopedArchive(bundle);
       // Live structures may change after the frozen season. Its stored archive remains authoritative.
       await writeStructure('100', { ...past, pools:{} }, scope('earlier'));
-    } else if (storage === 'live') {
+    } else if (storage === 'stored') {
       await writeStructure('100', past, scope('earlier'));
     }
     await writeStructure('200', current, scope('current'));
     await writeSeason(season);
     let prompt, staticReads = 0;
     t.mock.method(globalThis, 'fetch', async (target, init) => {
-      if (storage === 'static' && new URL(target).pathname === '/data/earlier.json') {
+      if (new URL(target).pathname === '/data/earlier.json') {
         staticReads++;
         return Response.json(past);
       }
@@ -69,10 +72,14 @@ for (const storage of ['live', 'archive', 'static']) {
       headers:{ 'Content-Type':'application/json' },
       body:JSON.stringify({ context:scope('current'), question:'Who did we play this season?' }) }));
     assert.equal(response.status, 200);
-    assert.match(prompt, /Earlier Cup — W 2–1 vs Edited Past - Updated Coach/);
-    assert.match(prompt, /Current Cup — W 2–1 vs Edited Current/);
-    assert.match(prompt, /Other Cup — W 2–1 vs Provider Opponent/);
-    assert.doesNotMatch(prompt, /Earlier Cup — W 2–1 vs (Provider Opponent|Archived Past)/);
+    if (active) {
+      assert.doesNotMatch(prompt, /Earlier Cup — W/);
+    } else {
+      assert.match(prompt, /Earlier Cup — W 2–1 vs Edited Past - Updated Coach/);
+      assert.match(prompt, /Current Cup — W 2–1 vs Edited Current/);
+      assert.match(prompt, /Other Cup — W 2–1 vs Provider Opponent/);
+      assert.doesNotMatch(prompt, /Earlier Cup — W 2–1 vs (Provider Opponent|Archived Past)/);
+    }
     assert.equal(staticReads, storage === 'static' ? 1 : 0);
     assert.equal((await readStructure('200', scope('current'))).meta.wicked.games[0].opp, 'Provider Opponent');
   });

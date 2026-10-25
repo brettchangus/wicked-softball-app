@@ -6,23 +6,30 @@
 // - Pending schedules are rediscovered hourly, including weekdays. Published Tourney Machine
 //   schedules refresh hourly in the week before play and every five minutes during the event;
 //   published NorCal schedules refresh hourly from a week before play through the last day.
+// - GameChanger season records (tokenless public profiles) refresh every 3 hours, and every
+//   30 minutes from the tournament's first day through its last.
 import { buildProviderStructure, structureIsCurrent, norcalScheduleRefreshDue, applyNorcalScheduleRefresh } from './lib/providers.js';
-import { listSeasonContexts, readStructure, writeStructure, readSetupAttempt, writeSetupAttempt, clearSetupAttempt } from './lib/snapshot.js';
+import { listSeasonContexts, readStructure, writeStructure, readSetupAttempt, writeSetupAttempt, clearSetupAttempt, readGameChangerRecords } from './lib/snapshot.js';
 import { SETUP_VERSION } from './lib/tournament.js';
 import { effectiveSelection } from './lib/context.js';
 import { runScoreCheck } from './lib/scores.js';
+import { linkedGameChangerRecordUrls, gameChangerRecordsRefreshDue, refreshGameChangerRecords } from './lib/gamechanger-records.js';
 
 export default async function handler() {
   const contexts = await listSeasonContexts({ status:'active' });
   if (!contexts.length) return new Response('no active seasons', { status:200 });
   const todayPT = new Date(Date.now()).toLocaleDateString('en-CA', { timeZone:'America/Los_Angeles' });
-  const outcomes = [];
+  const outcomes = [], recordRefreshes = [];
   // Keep this sequential: provider discovery can fan out to many requests per event, and a
   // small youth-sports deployment benefits more from predictable provider load than parallelism.
   for (const context of contexts) {
     const { eventId, scope, team, event } = context;
     const selection = effectiveSelection(event);
     let structure = await readStructure(eventId, scope);
+    // Records run off whatever structure is stored, before setup and the event window can skip
+    // this context. They run alongside setup and the score check, never ahead of them, and are
+    // collected before the tick returns.
+    if (structure) recordRefreshes.push(refreshRecordsIfDue(context, structure, todayPT));
     if (!structureIsCurrent(structure, eventId, team, selection) || (structure?.meta?.schedulePending
       && Date.now() - Date.parse(structure.meta.generatedAt || 0) >= 3600000)) {
       // Only defer while there is nothing live to poll (no structure yet, or a pending schedule).
@@ -82,7 +89,24 @@ export default async function handler() {
       outcomes.push(`${context.teamKey}/${context.seasonKey}: score check failed`);
     }
   }
+  outcomes.push(...(await Promise.all(recordRefreshes)).filter(Boolean));
   return new Response(outcomes.join('\n'), { status:200 });
+}
+
+// GameChanger season records; resolves to an outcome line, or null when nothing was due.
+// Never rejects, so a GameChanger failure can't affect the rest of the tick.
+async function refreshRecordsIfDue(context, structure, todayPT) {
+  const label = `${context.teamKey}/${context.seasonKey}`;
+  try {
+    const links = await linkedGameChangerRecordUrls(context, structure);
+    const dates = [...(structure.meta?.dates || []), structure.meta?.bracketDate];
+    if (!gameChangerRecordsRefreshDue(await readGameChangerRecords(context.scope), links, { dates, todayPT, now:Date.now() }))
+      return null;
+    const result = await refreshGameChangerRecords(context.scope, links, { now:Date.now() });
+    return `${label}: GameChanger records refreshed (${result.checked} checked, ${result.changed} changed, ${result.failed} failed)`;
+  } catch (error) {
+    return `${label}: GameChanger records refresh failed`;
+  }
 }
 
 export const config = { schedule: '*/5 * * * *' };

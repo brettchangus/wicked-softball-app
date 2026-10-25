@@ -297,7 +297,7 @@ function rendererGlobals(panel, s) {
   const globals={ document:{getElementById:()=>panel},TournamentProjection:projection,BRACKETS:s.brackets,
     bracketGameData:s.bracketGames || {},POOL_KEYS:Object.keys(s.pools || {}),MY_ID:'W',SISTER_ID:'S',
     bracketTeam:(id,name)=>({id,name}),historyEsc:v=>String(v).replaceAll('<','&lt;'),
-    jsArg:JSON.stringify,gameChangerLinkHtml:()=>'',bktGameHeader:()=>'',fmtFrameTime:()=>'',trophyIcon:()=>'',
+    jsArg:JSON.stringify,bracketScoutLinkHtml:()=>'',bktGameHeader:()=>'',fmtFrameTime:()=>'',trophyIcon:()=>'',
     _normStatus:st=>st === 'completed' ? 'final' : st === 'upcoming' ? 'upcoming' : 'live',
     bracketTrophyPlace:()=>1,watchBracketTreeLayout:()=>{},
   };

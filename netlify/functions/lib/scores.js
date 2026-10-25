@@ -3,15 +3,15 @@
 // `completed` transition. Used by check-scores.js (cron, window-gated) and admin.js
 // (manual "pull scores now", forced). Lives under lib/ so esbuild bundles it without
 // registering its own endpoint. Caller decides whether to run; this never checks the date window.
-import { tourneyMachinePlacement } from './tm-placement.js';
+import { teamPlacement } from './tm-placement.js';
 import { getStore } from '@netlify/blobs';
 import webpush from 'web-push';
 import { MY_ID, VAPID_SUBJECT } from './tournament.js';
 import { isLegacySubscription } from './push.js';
-import { fetchTeamStats } from './norcal.js';
+import { assignedTeamId, fetchTeamStats } from './norcal.js';
 import { fetchTourneyMachine, normalizeTourneyMachineIds, buildTourneyMachineStructureFromParsed, reconcileTourneyMachineStructure } from './tourneymachine.js';
 import { parseEventRef } from './providers.js';
-import { readResults, writeResults, readConfig, writeConfig, writeSeason, writeStructure } from './snapshot.js';
+import { readResults, writeResults, readOverrides, readConfig, writeConfig, writeSeason, writeStructure } from './snapshot.js';
 import { loadTeamDisplay } from './team-display.js';
 
 const POOL_API    = (roundKey, n) => `https://norcal.registerplay.com/api/v1/EP/poolDisplay/false/${roundKey}/${n}/0`;
@@ -28,7 +28,7 @@ try {
 } catch { /* push disabled until VAPID env is set */ }
 
 // Bracket games in the shape the client's bracketGameData expects.
-function extractBracketGames(d) {
+export function extractBracketGames(d) {
   const games = [];
   for (const rs of (d.bracket?.roundSets || []))
     for (const round of (rs.rounds || []))
@@ -37,8 +37,8 @@ function extractBracketGames(d) {
         games.push({
           key: g._key, gameNo: g.gameNo, time: g.datetime,
           topSeed: g.topSeedDisplay, botSeed: g.botSeedDisplay,
-          topId: g.topTeam?.teamID || null, topName: g.topTeam?.label || null,
-          botId: g.botTeam?.teamID || null, botName: g.botTeam?.label || null,
+          topId: assignedTeamId(g.topTeam?.teamID), topName: g.topTeam?.label || null,
+          botId: assignedTeamId(g.botTeam?.teamID), botName: g.botTeam?.label || null,
           topScore: g.topScore, botScore: g.botScore,
           status: g.topScoreStatus || null,
           fac: g.facility?.abr || null, field: g.field || null,
@@ -53,64 +53,8 @@ function extractBracketGames(d) {
 // still playing. Persisted to config (per event) so the season-list medal + next-game
 // placement card survive switching to the next tournament (the snapshot only carries the
 // active event's live bracket data, so a *past* event's result must be captured here).
-function computeWickedPlacement(structure, results) {
-  const myId = structure.meta?.providerTeamId || MY_ID;
-  if (structure.meta?.provider === 'tourneymachine') {
-    return tourneyMachinePlacement(structure.brackets || [], Object.values(results.bracketGames || {}).flat(), myId);
-  }
-  for (const b of structure.brackets || []) {
-    const games = results.bracketGames?.[b.level] || [];
-    const mine = games.filter(g => g.topId === myId || g.botId === myId);
-    if (!mine.length) continue;
-
-    if (mine.some(g => !isFinal(g.status))) return null; // still playing
-
-    const lastGame = mine.reduce((a, c) => ((a.time || '') > (c.time || '') ? a : c));
-    const iWon = lastGame.topId === myId
-      ? (lastGame.topScore ?? 0) > (lastGame.botScore ?? 0)
-      : (lastGame.botScore ?? 0) > (lastGame.topScore ?? 0);
-
-    const label = `${b.label} Bracket`;
-
-    // Winner
-    if (iWon) {
-      return { label, emoji: '🏆', place: '1st Place' };
-    }
-
-    // Runner-up
-    const maxNo = Math.max(...games.map(g => g.gameNo || 0));
-    if (lastGame.gameNo === maxNo) {
-      return { label, emoji: '🏆', place: '2nd Place' };
-    }
-
-    // Third place
-    if (maxNo - lastGame.gameNo === 1) {
-      return { label, emoji: '🏆', place: '3rd Place' };
-    }
-
-    // Everything else: compute placement dynamically
-    const placeNumber = maxNo - lastGame.gameNo + 2; 
-    // Explanation:
-    //   maxNo → 2nd place loss
-    //   maxNo-1 → 3rd place loss
-    //   maxNo-2 → 4th place loss
-    //   maxNo-3 → 5th place loss
-    //   etc.
-
-    const suffix =
-      placeNumber === 1 ? '1st' :
-      placeNumber === 2 ? '2nd' :
-      placeNumber === 3 ? '3rd' :
-      `${placeNumber}th`;
-
-    return {
-      label,
-      emoji: '🎖️',
-      place: `${suffix} Place`
-    };
-  }
-
-  return null;
+function computeWickedPlacement(structure, results, overrides = {}) {
+  return teamPlacement(structure, results, structure.meta?.providerTeamId || MY_ID, overrides);
 }
 
 
@@ -129,7 +73,9 @@ export function applyCapturedPlacement(config = {}, placement) {
 }
 
 async function persistWickedPlacement(eventId, structure, results, context = null) {
-  const placement = computeWickedPlacement(structure, results);
+  // A manual bracket score correction (L3) decides the finish, as it does on the dashboard.
+  const overrides = await readOverrides(eventId, context?.scope || null).catch(() => ({}));
+  const placement = computeWickedPlacement(structure, results, overrides);
   if (!placement) return;
   if (context?.season && context?.event) {
     const next = applyCapturedPlacement(context.event.config || {}, placement);
@@ -206,7 +152,7 @@ export async function runScoreCheck(eventId, structure, { force = false, context
   const pushStructure = structure;
   let displayLoad = null;
   const teamDisplay = () => (displayLoad ||= loadTeamDisplay(context?.scope || null, pushStructure, {
-    opponents:context?.event?.config?.opponents, links:context?.event?.config?.gameChangerTeams,
+    context, opponents:context?.event?.config?.opponents, links:context?.event?.config?.gameChangerTeams,
     ownUrl:context?.season?.teamConfig?.gameChangerUrl,
   }).catch(() => ({})));
   // Push once on the completed transition, to subscribers who belled this game.
